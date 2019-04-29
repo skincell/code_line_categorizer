@@ -8,8 +8,8 @@ def find_empty_lines(line):
     """
     if line.strip("\t").strip(" ").strip("\n") == '':
         return 1
-    else:
-        return 0
+
+    return 0
 
 
 
