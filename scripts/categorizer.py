@@ -6,11 +6,20 @@ def find_empty_lines(line):
     :param line:
     :return:
     """
+
     if line.strip("\t").strip(" ").strip("\n") == '':
         return 1
 
     return 0
 
+def find_comment_lines(line):
+
+    if line.strip(" ").strip("\t")[0] == "#":
+        return 1
+    elif "\"\"\"" in line or "'''" in line:
+        return 1
+
+    return 0
 
 
 def main():
@@ -35,11 +44,11 @@ def main():
     # Categorizing lines
     for line in lines:
         empty_lines.append(find_empty_lines(line))
-
+        comment_lines.append(find_comment_lines(line))
 
     # Debug portion
     print("Empty Lines")
-    print_all_cats(lines, empty_lines)
+    print_all_cats(lines, comment_lines)
 
 def print_all_cats(lines, category):
     """
