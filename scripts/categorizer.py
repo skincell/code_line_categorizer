@@ -12,15 +12,75 @@ def find_empty_lines(line):
 
     return 0
 
-def find_comment_lines(line):
+def find_comment_lines(lines):
+    """
+    Tries to categorize comment lines.
+    We treat comment lines as non-code or something that can
+    cause false positives for other categorizers.
 
-    if line.strip(" ").strip("\t")[0] == "#":
-        return 1
-    elif "\"\"\"" in line or "'''" in line:
-        return 1
+    Also comments + multi line is a double categorization.
+    We are trying to keep categorizations mostly separate from each other,
+    but this one breaks that rule.
 
-    return 0
+    :param line:
+    :return:
+    """
 
+    comment_lines = []
+    multiline_comment = False
+    for line in lines:
+
+        # Checks for a regular comment
+        if line.strip(" ").strip("\t")[0] == "#":
+             comment_lines.append(1)
+             continue
+        # Checking for multiline comment start or end
+        elif ("\"\"\"" in line or "'''" in line) \
+            and "if" not in line:
+            # [ "if" not in line ^ ] is a hack that can come back to hurt me.
+
+
+            comment_lines.append(1)
+
+            # Closes or Opens a multi line comment block
+            if multiline_comment:
+                multiline_comment = False
+            else:
+                multiline_comment = True
+
+            continue
+
+        # Part of a multi line comment
+        if multiline_comment:
+            comment_lines.append(1)
+            continue
+
+        # If it hits nothing else then it appends a zero
+        comment_lines.append(0)
+
+    return comment_lines
+
+def strip_comments_after_code(lines, comment_lines):
+    """
+    Strips comments from lines which are not comment lines
+
+    :param lines:
+    :param comment_lines:
+    :return:
+    """
+    for line_number, line in enumerate(lines):
+        if comment_lines[line_number] == 1:
+            continue
+
+        # Try to find if a comment exists on code line
+        try:
+            comment_line_index = line.index("#")
+        except ValueError:
+            comment_line_index = None
+
+        if comment_line_index != None:
+            # inline comments should not appear when examining this using tools like the one below
+            lines[line_number] = line[0:comment_line_index]  # Should disappear inline comments from the analyzer
 
 def main():
     """
@@ -33,7 +93,6 @@ def main():
         lines = fp.readlines()
 
     empty_lines = []
-    comment_lines = []
     assigment_lines = []
     conditional_lines = []
     control_lines = []
@@ -41,13 +100,19 @@ def main():
     function_call_lines = []
     function_def_lines = []
 
+    # Categorize solely comment lines
+    comment_lines = find_comment_lines(lines)
+    # Sanatize the code from comments
+    strip_comments_after_code(lines, comment_lines)
+    # Get rid of comments on same lines as code
+
+
     # Categorizing lines
     for line in lines:
         empty_lines.append(find_empty_lines(line))
-        comment_lines.append(find_comment_lines(line))
 
     # Debug portion
-    print("Empty Lines")
+    print("Comment Lines")
     print_all_cats(lines, comment_lines)
 
 def print_all_cats(lines, category):
