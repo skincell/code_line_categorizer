@@ -15,12 +15,12 @@ def find_empty_lines(line):
 def find_comment_lines(lines):
     """
     Tries to categorize comment lines.
-    We treat comment lines as non-code or something that can
+    Comment lines are treated as non-code or something that can
     cause false positives for other categorizers.
 
     Also comments + multi line is a double categorization.
-    We are trying to keep categorizations mostly separate from each other,
-    but this one breaks that rule.
+    The design tries to keep categorizations mostly separate from each other,
+    but this one breaks that rule. It categorizes multi-line and comments at the same time
 
     :param line:
     :return:
@@ -34,15 +34,16 @@ def find_comment_lines(lines):
         if line.strip(" ").strip("\t")[0] == "#":
              comment_lines.append(1)
              continue
-        # Checking for multiline comment start or end
+
+        # Checks for multiline comment start or end
         elif ("\"\"\"" in line or "'''" in line) \
             and "if" not in line:
-            # [ "if" not in line ^ ] is a hack that can come back to hurt me.
+            # ["if" not in line]^ is a hack that can come back to hurt the project.
 
 
             comment_lines.append(1)
 
-            # Closes or Opens a multi line comment block
+            # Closes or opens a multi line comment block
             if multiline_comment:
                 multiline_comment = False
             else:
@@ -55,7 +56,7 @@ def find_comment_lines(lines):
             comment_lines.append(1)
             continue
 
-        # If it hits nothing else then it appends a zero
+        # Default case, if it hits nothing else then it appends a zero
         comment_lines.append(0)
 
     return comment_lines
@@ -69,6 +70,7 @@ def strip_comments_after_code(lines, comment_lines):
     :return:
     """
     for line_number, line in enumerate(lines):
+        # if a comment line, no modifications are needed.
         if comment_lines[line_number] == 1:
             continue
 
