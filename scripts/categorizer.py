@@ -1,5 +1,4 @@
 
-
 def find_empty_lines(line):
     """
     Returns 1 for an empty line and 0 for non-empty
@@ -73,45 +72,64 @@ def strip_comments_after_code(lines, comment_lines):
         # if a comment line, no modifications are needed.
         if comment_lines[line_number] == 1:
             continue
+        # This will be overwritten in while loop pretty quickly
+        comment_line_index = 0
+        # copy of the line
+        current_line = line
+        # Figuring out whether there is a comment char not in a string
+        while comment_line_index != None:
 
-        # Try to find if a comment exists on code line
-        try:
-            comment_line_index = line.index("#")
-        except ValueError:
-            comment_line_index = None
+            # Try to find if a comment exists on code line
+            try:
+                comment_line_index = current_line.index("#")
+            except ValueError:
+                comment_line_index = None
 
-        if comment_line_index != None:
+            if comment_line_index != None:
 
-            # Trying to capture the excpetion that a # in is in a string rather than after code on a line
-            string_quotes = []
+                if not check_if_in_string(line, comment_line_index):
+                    # inline comments should not appear when examining this using tools like the one below
+                    lines[line_number] = line[0:comment_line_index]  # Should disappear inline comments from the analyzer
+                    break
 
-            # Tries to find the indices of enclosing quotations
-            for char_index, char in enumerate(line):
+                # current_line is only for finding multiple # not for using in the quotation balancing
+                current_line = line[comment_line_index + 1:]
 
-                # 0 index if, check previous if escape then ignore, check if \" or '
-                if "\"" in char or "'" in char:
-                    if char_index != 0:
-                        # Pass over anything that is an escape character
-                        if line[char_index - 1] == "\\":
-                            continue
+def check_if_in_string(line, index_to_check):
+
+    # copy of line
+    # Trying to capture the excpetion that a # in is in a string rather than after code on a line
+    before_counter = 0
+    after_counter = 0
+
+    last_quotation = ''
+    # Tries to find the before and after balance of quotations.
+    # There is probably an imbalance with \" or ' might be weird.
+    for char_index, char in enumerate(line):
+
+        # Check for a quotation character first
+        if "\"" in char or ("'" in char):
+            if char_index != 0:
+                # Pass over anything that is an escape character
+                if line[char_index - 1] == "\\" or ("\'" in char and before_counter % 2 == 1 and "\"" in last_quotation):
+                    continue
+                else:
+                    if char_index < index_to_check:
+                        before_counter += 1
+                        if before_counter % 2 == 1:
+                            last_quotation = char
                         else:
-                            string_quotes.append(char_index)
+                            last_quotation = ''
                     else:
-                        string_quotes.append(char_index)
-
-            # Make sure that there are matching amount of quotations -> possible exceptionn multiline
-            if len(string_quotes) % 2 != 0:
-                # TODO update to actual name of script
-                raise RuntimeError("line %s: The string quotes are not seeming to create enclosing quotations" % (line_number))
-
-            for index in range(int(len(string_quotes) / 2)):
-                if string_quotes[2 * index] < comment_line_index and comment_line_index < string_quotes[2 * index + 1]:
-
-
+                        after_counter += 1
             else:
-                # inline comments should not appear when examining this using tools like the one below
-                lines[line_number] = line[0:comment_line_index]  # Should disappear inline comments from the analyzer
+                before_counter += 1
 
+    # You are not in a string
+    if before_counter % 2 == 0 :
+        return False
+    else:
+        return True
 
 # Draft of multi-line categorizer
 def multiline_lines(lines, comment_lines):
@@ -134,21 +152,32 @@ def multiline_lines(lines, comment_lines):
         if comment_lines[line_number]:
             multilines.append(0)
             continue
-
+        if line_number == 158:
+            print('blah')
+            pass
         # stack algorithmn
-        for char in line:
+        for char_index, char in enumerate(line):
+
             if char == "(":
-                multi_line_stack.append('(')
+                # Checks to see if the enclosure is not in a string
+                if not check_if_in_string(line, char_index):
+                    multi_line_stack.append('(')
             elif char == ")":
-                multi_line_stack.pop()
+                # This check must occur after the above check as this is not ensured to work on quotations
+                if not check_if_in_string(line, char_index):
+                    multi_line_stack.pop()
             elif char == "{":
-                multi_line_stack.append('{')
+                if not check_if_in_string(line, char_index):
+                    multi_line_stack.append('{')
             elif char == "}":
-                multi_line_stack.pop()
+                if not check_if_in_string(line, char_index):
+                    multi_line_stack.pop()
             elif char == "[":
-                multi_line_stack.append('[')
+                if not check_if_in_string(line, char_index):
+                    multi_line_stack.append('[')
             elif char == "]":
-                multi_line_stack.pop()
+                if not check_if_in_string(line, char_index):
+                    multi_line_stack.pop()
 
         #  parenthesis or another closure makes this multi-lined
         if multi_line_stack:
