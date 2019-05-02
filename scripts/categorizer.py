@@ -71,7 +71,7 @@ def strip_comments_after_code(lines, comment_lines):
         if comment_lines[line_number] == 1:
             continue
 
-        # This will be overwritten in while loop pretty quickly
+        # This will be overwritten in while loop
         comment_symbol_index = 0
 
         # copy of the line
@@ -88,7 +88,7 @@ def strip_comments_after_code(lines, comment_lines):
             if comment_symbol_index != None:
 
                 if not check_if_in_string(line, comment_symbol_index):
-                    # inline comments should not appear when examining this using tools like the one below
+                    # inline comments are removed from lines to reduce categorization complexity
                     lines[line_number] = line[0:comment_symbol_index]  # Should disappear inline comments from the analyzer
                     break
 
@@ -149,84 +149,83 @@ def check_if_in_string(line, index_to_check):
     else:
         return True
 
-# Draft of multi-line categorizer
 def multiline_lines(lines, comment_lines):
     """
-    Makes a data structure which tracks the lines which have multi-line facets.
+    Makes a data structure which tracks whether a code statement spans several lines, and numbers each multi-line group.
 
     Used https://www.techbeamers.com/understand-python-statement-indentation/#how-to-use-multiline-statement
     as a guide to what type of multi-line exists
 
     :param lines:
-    :return: * **multilines** : a list which has a 0 for a line number which corresponds to no multiline activity
+    :return: * **multiline_statements** : a list which has a 0 for a line number which corresponds to no multiline activity
                                 and a number corresponding to its grouping of multi-lines, so a multi-line statement may
                                 be labeled 3 across four lines.
     """
 
-    multi_line_stack = []
-    multilines = []
-    previous_line_multi = False
-    multi_line_grouping_number = 1
+    enclosure_stack = []
+    multiline_statements = len(lines) * [None]
+    continuation_line = False
+    multiline_statement_number = 1
 
     for line_number, line in enumerate(lines):
 
         # Checks to see if comment line
         if comment_lines[line_number]:
-            multilines.append(0)
+            multiline_statements[line_number] = 0
             continue
 
-        # parenthesis stack algorithmn
+        # closures stack algorithmn
         for char_index, char in enumerate(line):
 
             if char == "(":
                 # Checks to see if the enclosure is not in a string
                 if not check_if_in_string(line, char_index):
-                    multi_line_stack.append('(')
+                    enclosure_stack.append('(')
             elif char == ")":
                 # This check must occur after the above check as this is not ensured to work on quotations
                 if not check_if_in_string(line,
                                           char_index):
-                    multi_line_stack.pop()
+                    enclosure_stack.pop()
             elif char == "{":
                 if not check_if_in_string(line, char_index):
-                    multi_line_stack.append('{')
+                    enclosure_stack.append('{')
             elif char == "}":
                 if not check_if_in_string(line, char_index):
-                    multi_line_stack.pop()
+                    enclosure_stack.pop()
             elif char == "[":
                 if not check_if_in_string(line, char_index):
-                    multi_line_stack.append('[')
+                    enclosure_stack.append('[')
             elif char == "]":
                 if not check_if_in_string(line, char_index):
-                    multi_line_stack.pop()
+                    enclosure_stack.pop()
 
         #  parenthesis or another closure still open makes this multi-lined
-        if multi_line_stack:
-            multilines.append(multi_line_grouping_number)
-            previous_line_multi = True
+        if enclosure_stack:
+            multiline_statements[line_number] = multiline_statement_number
+            continuation_line = True
             continue
 
         # Checks for the explicit multi-line character
         elif len(line.strip(" ").strip("\n")) > 0 and line.strip(" ").strip("\n")[-1] == "\\":
-            multilines.append(multi_line_grouping_number)
-            previous_line_multi = True
+            multiline_statements[line_number] = multiline_statement_number
+            continuation_line = True
             continue
 
         # If the previous line was multi but no signals for more multi-occurs.
-        if previous_line_multi:
-            multilines.append(multi_line_grouping_number)
-            previous_line_multi = False
+        if continuation_line:
+            multiline_statements[line_number] = multiline_statement_number
+            continuation_line = False
 
             # increment the multi_line_numberings
-            multi_line_grouping_number += 1
+            multiline_statement_number += 1
             continue
 
         # Design note: any more conditionals for multi-line need a continue statement for this logic to work.
 
         # Default case if not multi-lined
-        multilines.append(0)
+        multiline_statements[line_number] = 0
 
-    return multilines
+    return multiline_statements
 
 def main():
     """
