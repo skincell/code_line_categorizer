@@ -4,9 +4,13 @@ This code base is meant to categorize each line of a *python* script several dif
 # Current Categoires
 * comments
 * empty lines
+* multi-line
 
 # To be supported
-* multi-line
+* function defs
+* assignments
+* conditionals
+*
 
 # Warnings List
 * Don't Support scripts that have inlined docstrings on a code line. I am sure somebody does that, but if you want support on that type of coding style do it yourself...
