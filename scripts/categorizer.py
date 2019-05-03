@@ -1,6 +1,8 @@
 import collections
 import re
 
+# TODO redo earlier sections with new found knowledge.
+
 def find_empty_lines(line):
     """
     Returns 1 for an empty line and 0 for non-empty
