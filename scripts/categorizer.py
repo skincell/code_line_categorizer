@@ -1,6 +1,5 @@
 import collections
 import re
-
 # TODO redo earlier sections with new found knowledge.
 
 def find_empty_lines(line):
@@ -16,6 +15,15 @@ def find_empty_lines(line):
     return 0
 
 def determine_if_conditional(line_number, multiline_number, line, categorizations):
+    """
+    Determines if the line has a conditional associated with it.
+
+    :param line_number:
+    :param multiline_number:
+    :param line:
+    :param categorizations:
+    :return:
+    """
     if "if" in line or "else" in line:
         # Don't need to check to see if "if" is in string as the first check wouldn't work if it was
         if re.search("if\s", line.strip(" ")[0:3]) != None:
