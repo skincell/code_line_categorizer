@@ -1,3 +1,7 @@
+import collections
+import re
+
+# TODO redo earlier sections with new found knowledge.
 
 def find_empty_lines(line):
     """
@@ -10,6 +14,25 @@ def find_empty_lines(line):
         return 1
 
     return 0
+
+def determine_if_conditional(line_number, multiline_number, line, categorizations):
+    if "if" in line or "else" in line:
+        # Don't need to check to see if "if" is in string as the first check wouldn't work if it was
+        if re.search("if\s", line.strip(" ")[0:3]) != None:
+            return 1
+        # The level up check for "else" ensures that there will be no index out of bounds bug
+        elif re.search("elif\s", line.strip(" ")[0:5]) != None:
+            return 1
+        elif re.search("else:", line.strip(" ")[0:5]) != None:
+            return 1
+
+    if line_number != 0:
+        if categorizations[line_number-1].multiline_statement_number and multiline_number:
+            if categorizations[line_number-1].conditional:
+                return 1
+
+    return 0
+
 
 def find_comment_lines(lines):
     """
@@ -238,14 +261,16 @@ def main():
         # This scope is bothering me
         lines = fp.readlines()
 
-    empty_lines = []
     assigment_lines = []
-    conditional_lines = []
     control_lines = []
     indent_levels = []
     function_call_lines = []
     function_def_lines = []
 
+
+    """
+    Pre-processing and other categorizations
+    """
     # Categorize and labels comment lines without code
     comment_lines = find_comment_lines(lines)
     # Gets rid of inlined comments
@@ -253,23 +278,45 @@ def main():
     # Categorizes multi-lined systems
     multilines = multiline_lines(lines, comment_lines)
 
+    categorizations = []
+
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty')
     # Categorizing lines
     for line_number, line in enumerate(lines):
 
+        multiline_number = multilines[line_number]
+        """
+        Exclusive categorization
+        """
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
-            empty_lines.append(0)
-
+            categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=1,
+                                               conditional=0, empty=0))
             continue
 
+        is_empty = find_empty_lines(line)
+        # Another exclusive trait of a line
+        if is_empty:
+            categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=0,
+                                               conditional=0, empty=is_empty))
+            continue
+
+
+        """
+        Inclusive categorizations
+        """
         # Categorizing
-        empty_lines.append(find_empty_lines(line))
+        is_conditional = determine_if_conditional(line_number, multiline_number, line, categorizations) # This might be an exclusive one
+
+        categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number], comment=0,
+                                           conditional=is_conditional, empty=0))
+
+        # Create the categorizations
 
     # Debug portion
-    print("multi-lines lines")
-    print_all_cats(lines, multilines)
+    print_all_cats(lines, "conditional", categorizations)
 
-def print_all_cats(lines, category):
+def print_all_cats(lines, category, categorizations):
     """
     Debug printing
 
@@ -277,14 +324,13 @@ def print_all_cats(lines, category):
     :param category:
     :return:
     """
-
+    print(category)
     for line_number, line in enumerate(lines):
 
-        print(str(line_number) + " "
-              + str(category[line_number])
-              + " "
-              + line.strip("\n"))
-
+        stripped_line = line.strip("\n")
+        # Wow if I had assigned a doc string to the variable then I would have had a comment categorization...
+        code = "print(str(line_number) + \" \" + str(categorizations[line_number].%s) + \" \" + stripped_line)" % (category)
+        exec(code)
 
 if __name__ == "__main__":
     main()
