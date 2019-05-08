@@ -5,12 +5,19 @@ This code base is meant to categorize each line of a *python* script several dif
 * comments
 * empty lines
 * multi-line
-
-# To be supported
+* conditionals
 * function defs
 * assignments
-* conditionals
-*
+
+# To be supported
+* function calls
+* hash lines and storage
+* command line calling and testing
+--------------------------- After this then I start making the tool that will be used for establishing relationships for a single script.
+* loops
+* control statements -> break, continue, return, etc.
+* indentation level
+* a lot more
 
 # Warnings List
 * Don't Support scripts that have inlined docstrings on a code line. I am sure somebody does that, but if you want support on that type of coding style do it yourself...
