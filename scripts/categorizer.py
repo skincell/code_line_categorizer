@@ -70,7 +70,7 @@ def determine_if_assignment(line_number, multiline_number, line,
 
     # Checks for assignments using the equal sign
     if "=" in line:
-        assignment_match_list = ["\w\s[=,+=,-=]\s", "\w\s[=,+=,-=]\w", "\w[=,+=,-=]\w", "\w[=,+=,-=]\s\w"]
+        assignment_match_list = ["[^=^!^>^<][=](\s|\w|\s\w)"]
         for assignment_match in assignment_match_list:
             results = re.search(assignment_match, line)
             if results != None:
