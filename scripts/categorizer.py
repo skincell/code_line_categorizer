@@ -41,6 +41,74 @@ def determine_if_conditional(line_number, multiline_number, line, categorization
 
     return 0
 
+def determine_if_assignment(line_number, multiline_number, line,
+                            categorizations, function_def):
+    """
+    Determines if the line has an assignment associated with it.
+
+    :param line_number:
+    :param multiline_number:
+    :param line:
+    :param categorizations:
+    :return:
+    """
+    # Looks for assignments that are from passing in variables from defs
+    if function_def:
+        if multiline_number:
+            # I want to eventually want to check in between the first and last line to make sure assignments occur
+            # But I'm assuming right now that you won't do the following
+            # def function_blah(
+            #                    )
+            return 1
+        else:
+            # https://stackoverflow.com/questions/4894069/regular-expression-to-return-text-between-parenthesis
+            if len(line[line.find("("):line.rfind(")")].strip()) > 0:
+                return 1
+
+        # no assignments are in parameters in this line
+        return 0
+
+    # Checks for assignments using the equal sign
+    if "=" in line:
+        assignment_match_list = ["[^=^!^>^<][=](\s|\w|\s\w)"]
+        for assignment_match in assignment_match_list:
+            results = re.search(assignment_match, line)
+            if results != None:
+                for result in results.regs:
+                    if not check_if_in_string(line, result[0]):
+                        return 1
+
+    # Checks for an assignment that goes through multiple lines
+    if line_number != 0:
+        if categorizations[line_number-1].multiline_statement_number and multiline_number:
+            if categorizations[line_number-1].assignment:
+                return 1
+
+    return 0
+
+
+def determine_if_function_def(line_number, multiline_number, line, categorizations):
+    """
+    Determines if the line has a function_def associated with it.
+
+    :param line_number:
+    :param multiline_number:
+    :param line:
+    :param categorizations:
+    :return:
+    """
+    if "def" in line:
+        # Don't need to check to see if "if" is in string as the first check wouldn't work if it was
+        if re.search("def\s", line.strip(" ")[0:4]) != None:
+            return 1
+
+    if line_number != 0:
+        if categorizations[line_number-1].multiline_statement_number and multiline_number:
+            if categorizations[line_number-1].func_def:
+                return 1
+
+    return 0
+
 
 def find_comment_lines(lines):
     """
@@ -288,7 +356,7 @@ def main():
 
     categorizations = []
 
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty')
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment')
     # Categorizing lines
     for line_number, line in enumerate(lines):
 
@@ -299,14 +367,14 @@ def main():
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
             categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=1,
-                                               conditional=0, empty=0))
+                                               conditional=0, empty=0, func_def=0, assignment=0))
             continue
 
         is_empty = find_empty_lines(line)
         # Another exclusive trait of a line
         if is_empty:
             categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=0,
-                                               conditional=0, empty=is_empty))
+                                               conditional=0, empty=is_empty, func_def=0, assignment=0))
             continue
 
 
@@ -315,14 +383,16 @@ def main():
         """
         # Categorizing
         is_conditional = determine_if_conditional(line_number, multiline_number, line, categorizations) # This might be an exclusive one
+        is_function_def = determine_if_function_def(line_number, multiline_number, line, categorizations)
+        is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
 
         categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number], comment=0,
-                                           conditional=is_conditional, empty=0))
+                                           conditional=is_conditional, empty=0, func_def=is_function_def, assignment=is_assignment))
 
         # Create the categorizations
 
     # Debug portion
-    print_all_cats(lines, "conditional", categorizations)
+    print_all_cats(lines, "assignment", categorizations)
 
 def print_all_cats(lines, category, categorizations):
     """
