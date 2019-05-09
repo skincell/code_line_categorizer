@@ -41,9 +41,10 @@ def determine_if_conditional(line_number, multiline_number, line, categorization
 
     return 0
 
-def determine_if_assignment(line_number, multiline_number, line, categorizations, function_def):
+def determine_if_assignment(line_number, multiline_number, line,
+                            categorizations, function_def):
     """
-    Determines if the line has a conditional associated with it.
+    Determines if the line has an assignment associated with it.
 
     :param line_number:
     :param multiline_number:
@@ -51,14 +52,25 @@ def determine_if_assignment(line_number, multiline_number, line, categorizations
     :param categorizations:
     :return:
     """
-    if line_number != 0 and function_def and not multiline_number:
-        # https://stackoverflow.com/questions/4894069/regular-expression-to-return-text-between-parenthesis
-        if len(line[line.find("("):line.rfind(")")].strip()) > 0:
+    # Looks for assignments that are from passing in variables from defs
+    if function_def:
+        if multiline_number:
+            # I want to eventually want to check in between the first and last line to make sure assignments occur
+            # But I'm assuming right now that you won't do the following
+            # def function_blah(
+            #                    )
             return 1
+        else:
+            # https://stackoverflow.com/questions/4894069/regular-expression-to-return-text-between-parenthesis
+            if len(line[line.find("("):line.rfind(")")].strip()) > 0:
+                return 1
 
+        # no assignments are in parameters in this line
+        return 0
 
+    # Checks for assignments using the equal sign
     if "=" in line:
-        assignment_match_list = ["\w\s=\s", "\w\s=\w", "\w=\w", "\w=\s\w"]
+        assignment_match_list = ["\w\s[=,+=,-=]\s", "\w\s[=,+=,-=]\w", "\w[=,+=,-=]\w", "\w[=,+=,-=]\s\w"]
         for assignment_match in assignment_match_list:
             results = re.search(assignment_match, line)
             if results != None:
@@ -66,6 +78,7 @@ def determine_if_assignment(line_number, multiline_number, line, categorizations
                     if not check_if_in_string(line, result[0]):
                         return 1
 
+    # Checks for an assignment that goes through multiple lines
     if line_number != 0:
         if categorizations[line_number-1].multiline_statement_number and multiline_number:
             if categorizations[line_number-1].assignment:
@@ -76,7 +89,7 @@ def determine_if_assignment(line_number, multiline_number, line, categorizations
 
 def determine_if_function_def(line_number, multiline_number, line, categorizations):
     """
-    Determines if the line has a conditional associated with it.
+    Determines if the line has a function_def associated with it.
 
     :param line_number:
     :param multiline_number:
