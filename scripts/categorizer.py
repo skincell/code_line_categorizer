@@ -1,5 +1,8 @@
 import collections
 import re
+import hashlib
+import json
+import os
 # TODO redo earlier sections with new found knowledge.
 
 def find_empty_lines(line):
@@ -105,6 +108,30 @@ def determine_if_function_def(line_number, multiline_number, line, categorizatio
     if line_number != 0:
         if categorizations[line_number-1].multiline_statement_number and multiline_number:
             if categorizations[line_number-1].func_def:
+                return 1
+
+    return 0
+
+def determine_if_function_call(line_number, multiline_number, line, categorizations):
+    """
+    Determines if the line has a function associated with it.
+
+    :param line_number:
+    :param multiline_number:
+    :param line:
+    :param categorizations:
+    :return:
+    """
+    if "def" not in line or re.search("def\s", line.strip(" ")[0:4]) == None:
+        results = re.search("(\w\s|\w)[(]", line)
+        if results != None:
+            for result in results.regs:
+                if not check_if_in_string(line, result[0]):
+                    return 1
+
+    if line_number != 0:
+        if categorizations[line_number-1].multiline_statement_number and multiline_number:
+            if categorizations[line_number-1].func_call:
                 return 1
 
     return 0
@@ -337,13 +364,6 @@ def main():
         # This scope is bothering me
         lines = fp.readlines()
 
-    assigment_lines = []
-    control_lines = []
-    indent_levels = []
-    function_call_lines = []
-    function_def_lines = []
-
-
     """
     Pre-processing and other categorizations
     """
@@ -355,8 +375,9 @@ def main():
     multilines = multiline_lines(lines, comment_lines)
 
     categorizations = []
+    hash_storage = {}
 
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment')
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment func_call')
     # Categorizing lines
     for line_number, line in enumerate(lines):
 
@@ -367,14 +388,14 @@ def main():
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
             categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=1,
-                                               conditional=0, empty=0, func_def=0, assignment=0))
+                                               conditional=0, empty=0, func_def=0, assignment=0, func_call=0))
             continue
 
         is_empty = find_empty_lines(line)
         # Another exclusive trait of a line
         if is_empty:
             categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=0,
-                                               conditional=0, empty=is_empty, func_def=0, assignment=0))
+                                               conditional=0, empty=is_empty, func_def=0, assignment=0, func_call=0))
             continue
 
 
@@ -385,14 +406,45 @@ def main():
         is_conditional = determine_if_conditional(line_number, multiline_number, line, categorizations) # This might be an exclusive one
         is_function_def = determine_if_function_def(line_number, multiline_number, line, categorizations)
         is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
+        is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
 
         categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number], comment=0,
-                                           conditional=is_conditional, empty=0, func_def=is_function_def, assignment=is_assignment))
+                                           conditional=is_conditional, empty=0, func_def=is_function_def, assignment=is_assignment, func_call= is_function_call))
 
-        # Create the categorizations
+        categorizations_numbers = range(0, 8)
+        hash_string = "%s" % line
+
+        hash_object = hashlib.md5((line + " " + str(line_number)).encode())
+
+        # String plus categorization
+        for number in categorizations_numbers:
+            hash_string += " " + str(categorizations[-1][number])
+
+        hash_storage[hash_object.hexdigest()] = hash_string
 
     # Debug portion
-    print_all_cats(lines, "assignment", categorizations)
+    print_all_cats(lines, "func_call", categorizations)
+
+    did_something_change = False
+    if os.path.isfile("../data/outputs/hash_storage.json"):
+        with open("../data/outputs/hash_storage.json", 'r') as fp:
+            previous_hash_storage = json.load(fp)
+            for hash in previous_hash_storage:
+                if hash in hash_storage:
+                    if hash_storage[hash] not in previous_hash_storage[hash]:
+                        print("Previous line categorizations")
+                        print(previous_hash_storage[hash])
+                        print("New Categorizations")
+                        print(hash_storage[hash])
+                        did_something_change = True
+
+
+    if did_something_change:
+        exit()
+
+    with open("../data/outputs/hash_storage.json", 'w') as fp:
+        json.dump(hash_storage, fp)
+
 
 def print_all_cats(lines, category, categorizations):
     """
