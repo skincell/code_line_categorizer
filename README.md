@@ -11,8 +11,10 @@ This code base is meant to categorize each line of a *python* script several dif
 * function calls
 * hash lines and storage
 
-# To be supported
-* refactor, so that the multiline and other passed in variables are less important/all over the place also refactor to get the hash tool not to be so not readability for what changed..
+# Todo List
+* Modify hashing setup to present more useful data
+* refactor to test hash functionality,
+* refactor so the multiline and other passed in variables are less important/all over the place also
 * command line calling and testing
 --------------------------- After this then I start making the tool that will be used for establishing relationships for a single script.
 * loops

@@ -1,8 +1,11 @@
+
+# All standard libraries
 import collections
 import re
 import hashlib
 import json
 import os
+
 # TODO redo earlier sections with new found knowledge.
 
 def find_empty_lines(line):
@@ -122,7 +125,9 @@ def determine_if_function_call(line_number, multiline_number, line, categorizati
     :param categorizations:
     :return:
     """
+    # Checking if the line is a not a function def.
     if "def" not in line or re.search("def\s", line.strip(" ")[0:4]) == None:
+        # Search for patterns which indicate function calls
         results = re.search("(\w\s|\w)[(]", line)
         if results != None:
             for result in results.regs:
@@ -378,6 +383,9 @@ def main():
     hash_storage = {}
 
     LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment func_call')
+    # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
+    LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
+
     # Categorizing lines
     for line_number, line in enumerate(lines):
 
@@ -387,15 +395,13 @@ def main():
         """
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
-            categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=1,
-                                               conditional=0, empty=0, func_def=0, assignment=0, func_call=0))
+            categorizations.append(LineAndCats(line=line, comment=1))
             continue
 
         is_empty = find_empty_lines(line)
         # Another exclusive trait of a line
         if is_empty:
-            categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=0,
-                                               conditional=0, empty=is_empty, func_def=0, assignment=0, func_call=0))
+            categorizations.append(LineAndCats(line=line, empty=1))
             continue
 
 
@@ -408,38 +414,43 @@ def main():
         is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
         is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
 
-        categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number], comment=0,
-                                           conditional=is_conditional, empty=0, func_def=is_function_def, assignment=is_assignment, func_call= is_function_call))
+        categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number],
+                                           conditional=is_conditional, func_def=is_function_def, assignment=is_assignment, func_call= is_function_call))
 
-        categorizations_numbers = range(0, 8)
-        hash_string = "%s" % line
 
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
 
-        # String plus categorization
-        for number in categorizations_numbers:
-            hash_string += " " + str(categorizations[-1][number])
+        # Create a string which tracks line classfications/categorizations to store in hash
+        line_classifications = ""
+        for number in range(len(LineAndCats._fields)):
+            line_classifications += " " +  "%s " % (LineAndCats._fields[number]) + str(categorizations[-1][number])
 
-        hash_storage[hash_object.hexdigest()] = hash_string
+        hash_storage[hash_object.hexdigest()] = line_classifications
 
     # Debug portion
     print_all_cats(lines, "func_call", categorizations)
+    changed_line_classification = False
+    new_lines = [""]
 
-    did_something_change = False
+    # Compares old hashes to new hashes to see if any categorization has changed for any line.
     if os.path.isfile("../data/outputs/hash_storage.json"):
         with open("../data/outputs/hash_storage.json", 'r') as fp:
             previous_hash_storage = json.load(fp)
             for hash in previous_hash_storage:
                 if hash in hash_storage:
+
+                    # Want to see if any categorization for a line has changed.
+                    # Do not care if only line has changed
+                    # Do not
                     if hash_storage[hash] not in previous_hash_storage[hash]:
-                        print("Previous line categorizations")
+                        print("Previous categorizations")
                         print(previous_hash_storage[hash])
                         print("New Categorizations")
                         print(hash_storage[hash])
-                        did_something_change = True
+                        changed_line_classification = True
 
 
-    if did_something_change:
+    if changed_line_classification:
         exit()
 
     with open("../data/outputs/hash_storage.json", 'w') as fp:
