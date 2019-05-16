@@ -415,7 +415,8 @@ def main():
         is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
 
         categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number],
-                                           conditional=is_conditional, func_def=is_function_def, assignment=is_assignment, func_call= is_function_call))
+                                           conditional=is_conditional, func_def=is_function_def,
+                                           assignment=is_assignment, func_call= is_function_call))
 
 
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
@@ -427,10 +428,20 @@ def main():
 
         hash_storage[hash_object.hexdigest()] = line_classifications
 
-    # Debug portion
+    # Debug portion -> maybe have all of theese produced into folders when ran???
     print_all_cats(lines, "func_call", categorizations)
+
+    print("Uncategorized LInes")
+    # TODO change editor background to be more friendly with black
+    # Print out lines which are not categorized as anything yet..
+    for cat in categorizations:
+        for number in range(1, len(LineAndCats._fields)):
+            if cat[number]:
+                break
+        else:
+            print(cat[0])
+
     changed_line_classification = False
-    new_lines = [""]
 
     # Compares old hashes to new hashes to see if any categorization has changed for any line.
     if os.path.isfile("../data/outputs/hash_storage.json"):
@@ -440,8 +451,8 @@ def main():
                 if hash in hash_storage:
 
                     # Want to see if any categorization for a line has changed.
-                    # Do not care if only line has changed
-                    # Do not
+                    # Do not care if only line has changed and no change in categorizations -> this is already taken care of implicitly
+                    # Do care if line doesn't change but categorizations do.
                     if hash_storage[hash] not in previous_hash_storage[hash]:
                         print("Previous categorizations")
                         print(previous_hash_storage[hash])
