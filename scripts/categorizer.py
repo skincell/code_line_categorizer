@@ -395,13 +395,13 @@ def main():
         """
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
-            categorizations.append(LineAndCats(line=line, comment=1))
+            categorizations.append(LineAndCats(line, comment=1))
             continue
 
         is_empty = find_empty_lines(line)
         # Another exclusive trait of a line
         if is_empty:
-            categorizations.append(LineAndCats(line=line, empty=1))
+            categorizations.append(LineAndCats(line, empty=1))
             continue
 
 
@@ -414,7 +414,7 @@ def main():
         is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
         is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
 
-        categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number],
+        categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
                                            conditional=is_conditional, func_def=is_function_def,
                                            assignment=is_assignment, func_call= is_function_call))
 
@@ -422,23 +422,25 @@ def main():
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
 
         # Create a string which tracks line classfications/categorizations to store in hash
-        line_classifications = ""
+        line_and_classifications = ""
         for number in range(len(LineAndCats._fields)):
-            line_classifications += " " +  "%s " % (LineAndCats._fields[number]) + str(categorizations[-1][number])
+            line_and_classifications += " " +  "%s " % (LineAndCats._fields[number]) + str(categorizations[-1][number])
 
-        hash_storage[hash_object.hexdigest()] = line_classifications
+        hash_storage[hash_object.hexdigest()] = line_and_classifications
 
     # Debug portion -> maybe have all of theese produced into folders when ran???
-    print_all_cats(lines, "func_call", categorizations)
+    print_file_cats(lines, "func_call", categorizations)
 
     print("Uncategorized LInes")
     # TODO change editor background to be more friendly with black
     # Print out lines which are not categorized as anything yet..
     for cat in categorizations:
-        for number in range(1, len(LineAndCats._fields)):
-            if cat[number]:
+        for cat_index in range(1, len(LineAndCats._fields)):
+            # Checks whether there is a categorization
+            if cat[cat_index]:
                 break
         else:
+            # Print uncategorized lines
             print(cat[0])
 
     changed_line_classification = False
@@ -468,7 +470,7 @@ def main():
         json.dump(hash_storage, fp)
 
 
-def print_all_cats(lines, category, categorizations):
+def print_file_cats(lines, category, categorizations):
     """
     Debug printing
 
