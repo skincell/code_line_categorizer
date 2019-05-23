@@ -34,7 +34,6 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
                         string_1 = previous_hash_storage[script_line_hash]
                         string_2 = new_hash_storage[script_line_hash]
 
-                        # TODO debate whether you should change this to instead use the line categorization structure instead
                         indices_of_differences = [i for i in range(len(string_1)) if string_1[i] != string_2[i]]
 
                         print(
