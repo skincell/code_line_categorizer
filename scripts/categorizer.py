@@ -1,6 +1,53 @@
+
+# All standard libraries
 import collections
 import re
+import hashlib
+import json
+import os
+
 # TODO redo earlier sections with new found knowledge.
+
+def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
+    """
+
+    :param new_hash_storage:
+    :param old_hash_file_path:
+    :return:
+    """
+    changed_line_classification = False
+
+    # Compares old hashes to new hashes to see if any categorization has changed for any line.
+    if os.path.isfile(old_hash_file_path):
+        with open(old_hash_file_path, 'r') as fp:
+            previous_hash_storage = json.load(fp)
+            for script_line_hash in previous_hash_storage:
+                if script_line_hash in new_hash_storage:
+
+                    # Want to see if any categorization for a line has changed.
+                    # Do not care if only line has changed and no change in categorizations -> this is already taken care of implicitly
+                    # Do care if line doesn't change but categorizations do.
+                    if new_hash_storage[script_line_hash] not in previous_hash_storage[script_line_hash]:
+                        line_end_index = new_hash_storage[script_line_hash].index("\n")
+                        index_of_line = new_hash_storage[script_line_hash].index("line")
+
+                        string_1 = previous_hash_storage[script_line_hash]
+                        string_2 = new_hash_storage[script_line_hash]
+
+                        indices_of_differences = [i for i in range(len(string_1)) if string_1[i] != string_2[i]]
+
+                        print(
+                            "Changed Categorization line \n %s " % (string_1[index_of_line + 4:line_end_index]).strip())
+                        for index in indices_of_differences:
+                            index_1 = string_1.rfind(" ", 0, index - 2)
+                            print("Categorization " + string_1[index_1:index] + " changed from " + string_1[
+                                index] + " to " + string_2[index])
+
+                        changed_line_classification = True
+    else:
+        changed_line_classification = True
+
+    return changed_line_classification
 
 def find_empty_lines(line):
     """
@@ -105,6 +152,32 @@ def determine_if_function_def(line_number, multiline_number, line, categorizatio
     if line_number != 0:
         if categorizations[line_number-1].multiline_statement_number and multiline_number:
             if categorizations[line_number-1].func_def:
+                return 1
+
+    return 0
+
+def determine_if_function_call(line_number, multiline_number, line, categorizations):
+    """
+    Determines if the line has a function associated with it.
+
+    :param line_number:
+    :param multiline_number:
+    :param line:
+    :param categorizations:
+    :return:
+    """
+    # Checking if the line is a not a function def.
+    if "def" not in line or re.search("def\s", line.strip(" ")[0:4]) == None:
+        # Search for patterns which indicate function calls
+        results = re.search("(\w\s|\w)[(]", line)
+        if results != None:
+            for result in results.regs:
+                if not check_if_in_string(line, result[0]):
+                    return 1
+
+    if line_number != 0:
+        if categorizations[line_number-1].multiline_statement_number and multiline_number:
+            if categorizations[line_number-1].func_call:
                 return 1
 
     return 0
@@ -337,13 +410,6 @@ def main():
         # This scope is bothering me
         lines = fp.readlines()
 
-    assigment_lines = []
-    control_lines = []
-    indent_levels = []
-    function_call_lines = []
-    function_def_lines = []
-
-
     """
     Pre-processing and other categorizations
     """
@@ -355,8 +421,12 @@ def main():
     multilines = multiline_lines(lines, comment_lines)
 
     categorizations = []
+    hash_storage = {}
 
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment')
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment func_call')
+    # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
+    LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
+
     # Categorizing lines
     for line_number, line in enumerate(lines):
 
@@ -366,15 +436,13 @@ def main():
         """
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
-            categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=1,
-                                               conditional=0, empty=0, func_def=0, assignment=0))
+            categorizations.append(LineAndCats(line, comment=1))
             continue
 
         is_empty = find_empty_lines(line)
         # Another exclusive trait of a line
         if is_empty:
-            categorizations.append(LineAndCats(line=line, multiline_statement_number=0, comment=0,
-                                               conditional=0, empty=is_empty, func_def=0, assignment=0))
+            categorizations.append(LineAndCats(line, empty=1))
             continue
 
 
@@ -385,16 +453,59 @@ def main():
         is_conditional = determine_if_conditional(line_number, multiline_number, line, categorizations) # This might be an exclusive one
         is_function_def = determine_if_function_def(line_number, multiline_number, line, categorizations)
         is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
+        is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
 
-        categorizations.append(LineAndCats(line=line, multiline_statement_number=multilines[line_number], comment=0,
-                                           conditional=is_conditional, empty=0, func_def=is_function_def, assignment=is_assignment))
+        categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
+                                           conditional=is_conditional, func_def=is_function_def,
+                                           assignment=is_assignment, func_call= is_function_call))
 
-        # Create the categorizations
 
-    # Debug portion
-    print_all_cats(lines, "assignment", categorizations)
+        hash_object = hashlib.md5((line + " " + str(line_number)).encode())
 
-def print_all_cats(lines, category, categorizations):
+        # Create a string which tracks line classfications/categorizations to store in hash
+        line_and_classifications = ""
+        for number in range(len(LineAndCats._fields)):
+            line_and_classifications += " " +  "%s " % (LineAndCats._fields[number]) + str(categorizations[-1][number])
+
+        hash_storage[hash_object.hexdigest()] = line_and_classifications
+
+    # Debug portion -> maybe have all of theese produced into folders when ran???
+    print_file_cats(lines, "func_call", categorizations)
+
+    print("Uncategorized LInes")
+
+    uncat_storage = {}
+    # TODO change editor background to be more friendly with black
+    # Print out lines which are not categorized as anything yet..
+    for cat in categorizations:
+        for cat_index in range(1, len(LineAndCats._fields)):
+            # Checks whether there is a categorization
+            if cat[cat_index]:
+                break
+        else:
+            print(cat[0].strip("\n"))
+            hash_object = hashlib.md5((line + " " + str(line_number)).encode())
+            uncat_storage[hash_object.hexdigest()] = line
+
+    # Changed categorization lines
+    hash_file_path = "../data/outputs/hash_storage.json"
+    changed_line_classification = compare_new_to_old_hashes(hash_storage, hash_file_path)
+
+    print("Newly Categorized")
+    # Going from uncategorized to categorized
+    hash_file_path = "../data/outputs/uncat_storage.json"
+    _ = compare_new_to_old_hashes(uncat_storage, hash_file_path)
+
+    if changed_line_classification:
+       exit()
+
+    with open("../data/outputs/hash_storage.json", 'w') as fp:
+        json.dump(hash_storage, fp)
+
+    with open("../data/outputs/uncat_hash_storage.json", 'w') as fp:
+        json.dump(uncat_storage, fp)
+
+def print_file_cats(lines, category, categorizations):
     """
     Debug printing
 
