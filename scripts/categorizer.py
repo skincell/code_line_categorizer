@@ -8,6 +8,48 @@ import os
 
 # TODO redo earlier sections with new found knowledge.
 
+def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
+    """
+
+    :param new_hash_storage:
+    :param old_hash_file_path:
+    :return:
+    """
+    changed_line_classification = False
+
+    # Compares old hashes to new hashes to see if any categorization has changed for any line.
+    if os.path.isfile(old_hash_file_path):
+        with open(old_hash_file_path, 'r') as fp:
+            previous_hash_storage = json.load(fp)
+            for script_line_hash in previous_hash_storage:
+                if script_line_hash in new_hash_storage:
+
+                    # Want to see if any categorization for a line has changed.
+                    # Do not care if only line has changed and no change in categorizations -> this is already taken care of implicitly
+                    # Do care if line doesn't change but categorizations do.
+                    if new_hash_storage[script_line_hash] not in previous_hash_storage[script_line_hash]:
+                        line_end_index = new_hash_storage[script_line_hash].index("\n")
+                        index_of_line = new_hash_storage[script_line_hash].index("line")
+
+                        string_1 = previous_hash_storage[script_line_hash]
+                        string_2 = new_hash_storage[script_line_hash]
+
+                        # TODO debate whether you should change this to instead use the line categorization structure instead
+                        indices_of_differences = [i for i in range(len(string_1)) if string_1[i] != string_2[i]]
+
+                        print(
+                            "Changed Categorization line \n %s " % (string_1[index_of_line + 4:line_end_index]).strip())
+                        for index in indices_of_differences:
+                            index_1 = string_1.rfind(" ", 0, index - 2)
+                            print("Categorization " + string_1[index_1:index] + " changed from " + string_1[
+                                index] + " to " + string_2[index])
+
+                        changed_line_classification = True
+    else:
+        changed_line_classification = True
+
+    return changed_line_classification
+
 def find_empty_lines(line):
     """
     Returns 1 for an empty line and 0 for non-empty
@@ -364,7 +406,7 @@ def main():
 
     :return:
     """
-    output_log = []
+
     with open("./categorizer.py") as fp:
         # This scope is bothering me
         lines = fp.readlines()
@@ -446,53 +488,14 @@ def main():
             hash_object = hashlib.md5((line + " " + str(line_number)).encode())
             uncat_storage[hash_object.hexdigest()] = line
 
-    changed_line_classification = False
+    # Changed categorization lines
+    hash_file_path = "../data/outputs/hash_storage.json"
+    changed_line_classification = compare_new_to_old_hashes(hash_storage, hash_file_path)
 
-    # Compares old hashes to new hashes to see if any categorization has changed for any line.
-    if os.path.isfile("../data/outputs/hash_storage.json"):
-        with open("../data/outputs/hash_storage.json", 'r') as fp:
-            previous_hash_storage = json.load(fp)
-            for hash in previous_hash_storage:
-                if hash in hash_storage:
-
-                    # Want to see if any categorization for a line has changed.
-                    # Do not care if only line has changed and no change in categorizations -> this is already taken care of implicitly
-                    # Do care if line doesn't change but categorizations do.
-                    if hash_storage[hash] not in previous_hash_storage[hash]:
-                        line_end_index = hash_storage[hash].index("\n")
-                        index_of_line = hash_storage[hash].index("line")
-                        
-                        string_1 = previous_hash_storage[hash]
-                        string_2 = hash_storage[hash]
-
-                        # TODO debate whether you should change this to instead use the line categorization structure instead
-                        indices_of_differences = [i for i in xrange(len(string_1)) if string_1[i] != string_2[i]]
-
-                        print("Changed Categorization line \n %s " % (string_1[index_of_line+4:line_end_index]).strip())
-                        for index in indices_of_differences:
-
-                            index_1 = string_1.rfind(" ", 0, index - 2)
-                            print("Categorization " + string_1[index_1:index] + " changed from " + string_1[index] + " to " + string_2[index])
-
-                        changed_line_classification = True
-
-
-    # Compares old hashes to new hashes to see when something goes from uncat storage to categorized storage.
-    if os.path.isfile("../data/outputs/uncat_storage.json"):
-        with open("../data/outputs/uncat_storage.json", 'r') as fp:
-            previous_hash_storage = json.load(fp)
-            for hash in previous_hash_storage:
-                if hash in hash_storage:
-
-                    # Want to see if any categorization for a line has changed.
-                    # Do not care if only line has changed and no change in categorizations -> this is already taken care of implicitly
-                    # Do care if line doesn't change but categorizations do.
-                    if uncat_storage[hash] not in previous_hash_storage[hash]:
-                        print("Uncat Storage")
-                        print(previous_hash_storage[hash])
-                        print("Now Categorized")
-                        print(hash_storage[hash])
-                      
+    print("Newly Categorized")
+    # Going from uncategorized to categorized
+    hash_file_path = "../data/outputs/uncat_storage.json"
+    _ = compare_new_to_old_hashes(uncat_storage, hash_file_path)
 
     if changed_line_classification:
        exit()
