@@ -61,7 +61,7 @@ def find_empty_lines(line):
 
     return 0
 
-def determine_if_conditional(line_number, multiline_number, line, categorizations):
+def determine_if_conditional(line):
     """
     Determines if the line has a conditional associated with it.
 
@@ -81,14 +81,9 @@ def determine_if_conditional(line_number, multiline_number, line, categorization
         elif re.search("else:", line.strip(" ")[0:5]) != None:
             return 1
 
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].conditional:
-                return 1
-
     return 0
 
-def determine_if_assignment(line_number, multiline_number, line,
+def determine_if_assignment(multiline_number, line,
                             categorizations, function_def):
     """
     Determines if the line has an assignment associated with it.
@@ -125,16 +120,10 @@ def determine_if_assignment(line_number, multiline_number, line,
                     if not check_if_in_string(line, result[0]):
                         return 1
 
-    # Checks for an assignment that goes through multiple lines
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].assignment:
-                return 1
-
     return 0
 
 
-def determine_if_function_def(line_number, multiline_number, line, categorizations):
+def determine_if_function_def(line):
     """
     Determines if the line has a function_def associated with it.
 
@@ -149,14 +138,9 @@ def determine_if_function_def(line_number, multiline_number, line, categorizatio
         if re.search("def\s", line.strip(" ")[0:4]) != None:
             return 1
 
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].func_def:
-                return 1
-
     return 0
 
-def determine_if_function_call(line_number, multiline_number, line, categorizations):
+def determine_if_function_call(line):
     """
     Determines if the line has a function associated with it.
 
@@ -174,11 +158,6 @@ def determine_if_function_call(line_number, multiline_number, line, categorizati
             for result in results.regs:
                 if not check_if_in_string(line, result[0]):
                     return 1
-
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].func_call:
-                return 1
 
     return 0
 
@@ -431,6 +410,13 @@ def main():
     for line_number, line in enumerate(lines):
 
         multiline_number = multilines[line_number]
+        # Logic to carry over what happened to the current line
+        if line_number != 0:
+            if categorizations[line_number - 1].multiline_statement_number and multiline_number:
+                categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
+                                                   conditional=is_conditional, func_def=is_function_def,
+                                                   assignment=is_assignment, func_call=is_function_call))
+                continue
         """
         Exclusive categorization
         """
@@ -450,11 +436,12 @@ def main():
         Inclusive categorizations
         """
         # Categorizing
-        is_conditional = determine_if_conditional(line_number, multiline_number, line, categorizations) # This might be an exclusive one
-        is_function_def = determine_if_function_def(line_number, multiline_number, line, categorizations)
-        is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
-        is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
+        is_conditional = determine_if_conditional(line) # This might be an exclusive one
+        is_function_def = determine_if_function_def(line)
+        is_assignment = determine_if_assignment(multiline_number, line, categorizations, is_function_def)
+        is_function_call = determine_if_function_call(line)
 
+        # TODO try to figure out if you can use keyword arguments
         categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
                                            conditional=is_conditional, func_def=is_function_def,
                                            assignment=is_assignment, func_call= is_function_call))
