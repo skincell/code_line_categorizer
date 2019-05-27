@@ -10,7 +10,7 @@ This code base is meant to categorize each line of a *python* script several dif
 * assignments
 * function calls
 * hash lines and storage
-* command line calling and testing
+* command line calling
 
 
 
@@ -19,7 +19,8 @@ This code base is meant to categorize each line of a *python* script several dif
 * loops
 * control statements -> break, continue, return, etc.
 * indentation level
-* Really want to figure out how to deal with assignments, function defs, etc are all categories or sub categories of each other. Maybe
+* Dealt with different assignments by making sub categories for each one rather than one broad category.... Revisit this.
+* Add integration testing
 * a lot more
 
 # Warnings List
