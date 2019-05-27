@@ -466,6 +466,9 @@ def main(args):
     with open("../data/outputs/uncat_hash_storage.json", 'w') as fp:
         json.dump(uncat_storage, fp)
 
+    with open("../data/outputs/%s_cat_output.json" % (args.file_path.split("/")[-1].split("/")[-1].split(".")[0]), "w") as fp:
+        json.dump(categorizations, fp)
+
 def print_file_cats(lines, category, categorizations):
     """
     Debug printing
