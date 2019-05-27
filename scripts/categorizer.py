@@ -65,10 +65,7 @@ def determine_if_conditional(line):
     """
     Determines if the line has a conditional associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
     if "if" in line or "else" in line:
@@ -83,32 +80,14 @@ def determine_if_conditional(line):
 
     return 0
 
-def determine_if_assignment(multiline_number, line,
-                            categorizations, function_def):
+def determine_if_equal_sign_assignment(line):
+
     """
     Determines if the line has an assignment associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
-    # Looks for assignments that are from passing in variables from defs
-    if function_def:
-        if multiline_number:
-            # I want to eventually want to check in between the first and last line to make sure assignments occur
-            # But I'm assuming right now that you won't do the following
-            # def function_blah(
-            #                    )
-            return 1
-        else:
-            # https://stackoverflow.com/questions/4894069/regular-expression-to-return-text-between-parenthesis
-            if len(line[line.find("("):line.rfind(")")].strip()) > 0:
-                return 1
-
-        # no assignments are in parameters in this line
-        return 0
 
     # Checks for assignments using the equal sign
     if "=" in line:
@@ -127,10 +106,7 @@ def determine_if_function_def(line):
     """
     Determines if the line has a function_def associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
     if "def" in line:
@@ -144,10 +120,7 @@ def determine_if_function_call(line):
     """
     Determines if the line has a function associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
     # Checking if the line is a not a function def.
@@ -402,7 +375,7 @@ def main():
     categorizations = []
     hash_storage = {}
 
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment func_call')
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call')
     # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
     LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
 
@@ -415,7 +388,7 @@ def main():
             if categorizations[line_number - 1].multiline_statement_number and multiline_number:
                 categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
                                                    conditional=is_conditional, func_def=is_function_def,
-                                                   assignment=is_assignment, func_call=is_function_call))
+                                                   equal_sign_assignment=is_equal_sign_assignment, func_call=is_function_call))
                 continue
         """
         Exclusive categorization
@@ -438,13 +411,13 @@ def main():
         # Categorizing
         is_conditional = determine_if_conditional(line) # This might be an exclusive one
         is_function_def = determine_if_function_def(line)
-        is_assignment = determine_if_assignment(multiline_number, line, categorizations, is_function_def)
+        is_equal_sign_assignment = determine_if_equal_sign_assignment(line)
         is_function_call = determine_if_function_call(line)
 
         # TODO try to figure out if you can use keyword arguments
         categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
                                            conditional=is_conditional, func_def=is_function_def,
-                                           assignment=is_assignment, func_call= is_function_call))
+                                           equal_sign_assignment=is_equal_sign_assignment, func_call= is_function_call))
 
 
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
