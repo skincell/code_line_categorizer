@@ -5,6 +5,7 @@ import re
 import hashlib
 import json
 import os
+import argparse
 
 # TODO redo earlier sections with new found knowledge.
 
@@ -351,14 +352,14 @@ def multiline_lines(lines, comment_lines):
 
     return multiline_statements
 
-def main():
+def main(args):
     """
     Currently this function does some prescripted stuff.
 
     :return:
     """
 
-    with open("./categorizer.py") as fp:
+    with open(args.file_path) as fp:
         # This scope is bothering me
         lines = fp.readlines()
 
@@ -482,4 +483,7 @@ def print_file_cats(lines, category, categorizations):
         exec(code)
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser(description="Categorizes the lines of code in a single script")
+    parser.add_argument("--file_path", default="./categorizer.py", help="File path of file to categorize" )
+    main(parser.parse_args())
