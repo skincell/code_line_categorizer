@@ -139,8 +139,13 @@ def determine_if_function_call(line):
                 keywords = ["and", "or" , "if", "elif"]
                 for keyword in keywords:
                     if keyword in line:
-                        secondary_results = re.search(keyword, line)
+                        print(line)
+                        # Checks to see whether the instance of the keyword is at the start of a variable/function name. 
+                        secondary_results = re.search( "\s" + keyword, line)
+                        if secondary_results == None:
+                            continue
                         for second_result in secondary_results.regs:
+                            # Checks whether the keyword is the same before the possible function
                             if second_result[1]-1 == result[0]:
                                 continue_on_result = True
                         
