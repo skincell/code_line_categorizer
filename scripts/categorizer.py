@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import argparse
+import pdb
 
 # TODO redo earlier sections with new found knowledge.
 
@@ -130,6 +131,21 @@ def determine_if_function_call(line):
         results = re.search("(\w\s|\w)[(]", line)
         if results != None:
             for result in results.regs:
+
+                continue_on_result = False
+                
+                # Makes sure that the function isn't because of a keyword
+                # i.e example elif (x = 1 or y = 1) and (blah == 1)
+                keywords = ["and", "or" , "if", "elif"]
+                for keyword in keywords:
+                    if keyword in line:
+                        secondary_results = re.search(keyword, line)
+                        for second_result in secondary_results.regs:
+                            if second_result[1]-1 == result[0]:
+                                continue_on_result = True
+                        
+                if continue_on_result:
+                    continue
                 if not check_if_in_string(line, result[0]):
                     return 1
 
@@ -385,6 +401,8 @@ def main(args):
 
         multiline_number = multilines[line_number]
         # Logic to carry over what happened to the current line
+
+        # TODO Want to start categorizing this based on whether it is a multi-line conditional, function_call, function_def, and determine which one it is rather than just reassigning everything
         if line_number != 0:
             if categorizations[line_number - 1].multiline_statement_number and multiline_number:
                 categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
@@ -436,7 +454,6 @@ def main(args):
     print("Uncategorized LInes")
 
     uncat_storage = {}
-    # TODO change editor background to be more friendly with black
     # Print out lines which are not categorized as anything yet..
     for cat in categorizations:
         for cat_index in range(1, len(LineAndCats._fields)):
@@ -467,7 +484,12 @@ def main(args):
         json.dump(uncat_storage, fp)
 
     with open("../data/outputs/%s_cat_output.json" % (args.file_path.split("/")[-1].split("/")[-1].split(".")[0]), "w") as fp:
-        json.dump(categorizations, fp)
+        dict_cat = [0] * len(categorizations)
+        for index, cat in enumerate(categorizations):
+            # https://gist.github.com/Integralist/b25185f91ebc8a56fe070d499111b447
+            dict_cat[index] = cat._asdict()
+            
+        json.dump(dict_cat, fp)
 
 def print_file_cats(lines, category, categorizations):
     """
