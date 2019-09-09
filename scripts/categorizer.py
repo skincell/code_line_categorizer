@@ -5,6 +5,7 @@ import re
 import hashlib
 import json
 import os
+import argparse
 
 # TODO redo earlier sections with new found knowledge.
 
@@ -15,6 +16,7 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
     :param old_hash_file_path:
     :return:
     """
+
     changed_line_classification = False
 
     # Compares old hashes to new hashes to see if any categorization has changed for any line.
@@ -45,7 +47,7 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
 
                         changed_line_classification = True
     else:
-        changed_line_classification = True
+        changed_line_classification = False
 
     return changed_line_classification
 
@@ -61,14 +63,11 @@ def find_empty_lines(line):
 
     return 0
 
-def determine_if_conditional(line_number, multiline_number, line, categorizations):
+def determine_if_conditional(line):
     """
     Determines if the line has a conditional associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
     if "if" in line or "else" in line:
@@ -81,39 +80,16 @@ def determine_if_conditional(line_number, multiline_number, line, categorization
         elif re.search("else:", line.strip(" ")[0:5]) != None:
             return 1
 
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].conditional:
-                return 1
-
     return 0
 
-def determine_if_assignment(line_number, multiline_number, line,
-                            categorizations, function_def):
+def determine_if_equal_sign_assignment(line):
+
     """
     Determines if the line has an assignment associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
-    # Looks for assignments that are from passing in variables from defs
-    if function_def:
-        if multiline_number:
-            # I want to eventually want to check in between the first and last line to make sure assignments occur
-            # But I'm assuming right now that you won't do the following
-            # def function_blah(
-            #                    )
-            return 1
-        else:
-            # https://stackoverflow.com/questions/4894069/regular-expression-to-return-text-between-parenthesis
-            if len(line[line.find("("):line.rfind(")")].strip()) > 0:
-                return 1
-
-        # no assignments are in parameters in this line
-        return 0
 
     # Checks for assignments using the equal sign
     if "=" in line:
@@ -125,23 +101,14 @@ def determine_if_assignment(line_number, multiline_number, line,
                     if not check_if_in_string(line, result[0]):
                         return 1
 
-    # Checks for an assignment that goes through multiple lines
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].assignment:
-                return 1
-
     return 0
 
 
-def determine_if_function_def(line_number, multiline_number, line, categorizations):
+def determine_if_function_def(line):
     """
     Determines if the line has a function_def associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
     if "def" in line:
@@ -149,21 +116,13 @@ def determine_if_function_def(line_number, multiline_number, line, categorizatio
         if re.search("def\s", line.strip(" ")[0:4]) != None:
             return 1
 
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].func_def:
-                return 1
-
     return 0
 
-def determine_if_function_call(line_number, multiline_number, line, categorizations):
+def determine_if_function_call(line):
     """
     Determines if the line has a function associated with it.
 
-    :param line_number:
-    :param multiline_number:
     :param line:
-    :param categorizations:
     :return:
     """
     # Checking if the line is a not a function def.
@@ -172,13 +131,27 @@ def determine_if_function_call(line_number, multiline_number, line, categorizati
         results = re.search("(\w\s|\w)[(]", line)
         if results != None:
             for result in results.regs:
+
+                continue_on_result = False
+                
+                # Makes sure that the function isn't because of a keyword
+                # i.e example elif (x = 1 or y = 1) and (blah == 1)
+                keywords = ["and", "or" , "if", "elif"]
+                for keyword in keywords:
+                    if keyword in line:
+                        # Checks to see whether the instance of the keyword is at the start of a variable/function name. 
+                        secondary_results = re.search( "\s" + keyword, line)
+                        if secondary_results == None:
+                            continue
+                        for second_result in secondary_results.regs:
+                            # Checks whether the keyword is the same before the possible function
+                            if second_result[1]-1 == result[0]:
+                                continue_on_result = True
+                        
+                if continue_on_result:
+                    continue
                 if not check_if_in_string(line, result[0]):
                     return 1
-
-    if line_number != 0:
-        if categorizations[line_number-1].multiline_statement_number and multiline_number:
-            if categorizations[line_number-1].func_call:
-                return 1
 
     return 0
 
@@ -399,15 +372,14 @@ def multiline_lines(lines, comment_lines):
 
     return multiline_statements
 
-def main():
+def main(args):
     """
     Currently this function does some prescripted stuff.
 
     :return:
     """
 
-    with open("./categorizer.py") as fp:
-        # This scope is bothering me
+    with open(args.file_path) as fp:
         lines = fp.readlines()
 
     """
@@ -423,7 +395,8 @@ def main():
     categorizations = []
     hash_storage = {}
 
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def assignment func_call')
+    # Add a new category here when added
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call')
     # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
     LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
 
@@ -431,6 +404,15 @@ def main():
     for line_number, line in enumerate(lines):
 
         multiline_number = multilines[line_number]
+        # Logic to carry over what happened to the current line
+
+        # TODO Want to start categorizing this based on whether it is a multi-line conditional, function_call, function_def, and determine which one it is rather than just reassigning everything
+        if line_number != 0:
+            if categorizations[line_number - 1].multiline_statement_number and multiline_number:
+                categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
+                                                   conditional=is_conditional, func_def=is_function_def,
+                                                   equal_sign_assignment=is_equal_sign_assignment, func_call=is_function_call))
+                continue
         """
         Exclusive categorization
         """
@@ -450,14 +432,15 @@ def main():
         Inclusive categorizations
         """
         # Categorizing
-        is_conditional = determine_if_conditional(line_number, multiline_number, line, categorizations) # This might be an exclusive one
-        is_function_def = determine_if_function_def(line_number, multiline_number, line, categorizations)
-        is_assignment = determine_if_assignment(line_number, multiline_number, line, categorizations, is_function_def)
-        is_function_call = determine_if_function_call(line_number, multiline_number, line, categorizations)
+        is_conditional = determine_if_conditional(line) # This might be an exclusive one
+        is_function_def = determine_if_function_def(line)
+        is_equal_sign_assignment = determine_if_equal_sign_assignment(line)
+        is_function_call = determine_if_function_call(line)
 
+        # TODO try to figure out if you can use keyword arguments
         categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
                                            conditional=is_conditional, func_def=is_function_def,
-                                           assignment=is_assignment, func_call= is_function_call))
+                                           equal_sign_assignment=is_equal_sign_assignment, func_call= is_function_call))
 
 
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
@@ -472,10 +455,9 @@ def main():
     # Debug portion -> maybe have all of theese produced into folders when ran???
     print_file_cats(lines, "func_call", categorizations)
 
-    print("Uncategorized LInes")
+    print("Uncategorized Lines")
 
     uncat_storage = {}
-    # TODO change editor background to be more friendly with black
     # Print out lines which are not categorized as anything yet..
     for cat in categorizations:
         for cat_index in range(1, len(LineAndCats._fields)):
@@ -497,13 +479,21 @@ def main():
     _ = compare_new_to_old_hashes(uncat_storage, hash_file_path)
 
     if changed_line_classification:
-       exit()
+       raise NameError("The line(s) have changed classifications.")
 
     with open("../data/outputs/hash_storage.json", 'w') as fp:
         json.dump(hash_storage, fp)
 
     with open("../data/outputs/uncat_hash_storage.json", 'w') as fp:
         json.dump(uncat_storage, fp)
+
+    with open("../data/outputs/%s_cat_output.json" % (args.file_path.split("/")[-1].split("/")[-1].split(".")[0]), "w") as fp:
+        dict_cat = [0] * len(categorizations)
+        for index, cat in enumerate(categorizations):
+            # https://gist.github.com/Integralist/b25185f91ebc8a56fe070d499111b447
+            dict_cat[index] = cat._asdict()
+            
+        json.dump(dict_cat, fp)
 
 def print_file_cats(lines, category, categorizations):
     """
@@ -522,4 +512,7 @@ def print_file_cats(lines, category, categorizations):
         exec(code)
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser(description="Categorizes the lines of code in a single script")
+    parser.add_argument("--file_path", default="./categorizer.py", help="File path of file to categorize" )
+    main(parser.parse_args())

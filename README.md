@@ -10,14 +10,17 @@ This code base is meant to categorize each line of a *python* script several dif
 * assignments
 * function calls
 * hash lines and storage
+* command line calling
+
+
 
 # Todo List
-* refactor so the multiline and other passed in variables are less important/all over the place also  (state)
-* command line calling and testing
 --------------------------- After this then I start making the tool that will be used for establishing relationships for a single script.
 * loops
 * control statements -> break, continue, return, etc.
 * indentation level
+* Dealt with different assignments by making sub categories for each one rather than one broad category.... Revisit this.
+* Add integration testing
 * a lot more
 
 # Warnings List
