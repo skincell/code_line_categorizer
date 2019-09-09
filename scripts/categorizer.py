@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import argparse
-import pdb
 
 # TODO redo earlier sections with new found knowledge.
 
@@ -17,6 +16,7 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
     :param old_hash_file_path:
     :return:
     """
+
     changed_line_classification = False
 
     # Compares old hashes to new hashes to see if any categorization has changed for any line.
@@ -47,7 +47,7 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
 
                         changed_line_classification = True
     else:
-        changed_line_classification = True
+        changed_line_classification = False
 
     return changed_line_classification
 
@@ -139,7 +139,6 @@ def determine_if_function_call(line):
                 keywords = ["and", "or" , "if", "elif"]
                 for keyword in keywords:
                     if keyword in line:
-                        print(line)
                         # Checks to see whether the instance of the keyword is at the start of a variable/function name. 
                         secondary_results = re.search( "\s" + keyword, line)
                         if secondary_results == None:
@@ -381,7 +380,6 @@ def main(args):
     """
 
     with open(args.file_path) as fp:
-        # This scope is bothering me
         lines = fp.readlines()
 
     """
@@ -397,6 +395,7 @@ def main(args):
     categorizations = []
     hash_storage = {}
 
+    # Add a new category here when added
     LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call')
     # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
     LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
@@ -456,7 +455,7 @@ def main(args):
     # Debug portion -> maybe have all of theese produced into folders when ran???
     print_file_cats(lines, "func_call", categorizations)
 
-    print("Uncategorized LInes")
+    print("Uncategorized Lines")
 
     uncat_storage = {}
     # Print out lines which are not categorized as anything yet..
@@ -480,7 +479,7 @@ def main(args):
     _ = compare_new_to_old_hashes(uncat_storage, hash_file_path)
 
     if changed_line_classification:
-       exit()
+       raise NameError("The line(s) have changed classifications.")
 
     with open("../data/outputs/hash_storage.json", 'w') as fp:
         json.dump(hash_storage, fp)
