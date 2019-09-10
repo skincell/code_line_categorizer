@@ -3,38 +3,36 @@ import re
 import pdb
 
 def extract_function_name(line):
+
     functions = []
+
     # Search for patterns which indicate function calls
-    results = re.findall("(.\w+\s|.\w+)[(]", line)
-    if results == None:
+    function_name_candidates = re.findall("(.\w+\s|.\w+)[(]", line)
+    if function_name_candidates == None:
         return
-    for result in results:
-        continue_on_result = False
+    for func_name_candidate in function_name_candidates:
+        non_function_confirmed = False
         
-        # Makes sure that the function isn't because of a keyword
+        # Makes sure that the function isn't because of a non_function
         # i.e example elif (x = 1 or y = 1) and (blah == 1)
-        keywords = ["and", "or" , "if", "elif"]
-        for keyword in keywords:
-            if keyword in line:
-                # Checks to see whether the instance of the keyword is at the start of a variable/function name. 
-                secondary_results = re.search( "\s" + keyword, line)
-                if secondary_results == None:
+        non_functions = ["and", "or" , "if", "elif"]
+        for non_function in non_functions:
+            if non_function in func_name_candidate:
+                # Checks to see whether the instance of the non_function is part of a variable/function name. 
+                if non_function.strip() != func_name_candidate.strip().strip("."):
                     continue
-                for second_result in secondary_results.regs:
-                    # Checks whether the keyword is the same before the possible function
-                    if second_result[1]-1 == result[0]:
-                        continue_on_result = True
-                            
-        if continue_on_result:
+                else:
+                    non_function_confirmed = True
+                    break
+                
+        if non_function_confirmed:
             continue
+        
         # TODO check to see if the function is within a string
-        if len(result) == 0:
+        if len(func_name_candidate) == 0:
             continue
-        elif result[0] == "." or result[0] == " ":
-            functions.append(result[1:])
         else:
-            print("How did this happen??")
-            functions.append(result[0:])
+            functions.append(func_name_candidate[0:].strip().strip("."))
     return functions
 
                 
@@ -48,8 +46,6 @@ print("Function Calls")
 for num, cat in enumerate(categorizations):
     if cat['func_call'] == 1:
         cat["functions"] = extract_function_name(cat["line"])
-        print(num)
-        print(cat["functions"])
         function_calls["line_num"].append(num)
         function_calls["functions"].append(cat["functions"])
         
@@ -57,23 +53,19 @@ print("Function defs")
 for num, cat in enumerate(categorizations):
     if cat['func_def'] == 1:
         cat["function_defs"] = extract_function_name(cat["line"])
-        print(num)
-        print(cat["function_defs"])
         function_defs["line_num"].append(num)
         function_defs["functions"].extend(cat["function_defs"])
 
-count_non_found_functions = 0
+no_matches_found = 0
 for index, function_list in enumerate(function_calls["functions"]):
     for function in function_list:
         for i in range(len(function_defs["line_num"])):
             if function_defs["functions"][i] == function:
                 print(
                     "Function call %s on line number %s " % (function, function_calls["line_num"][index]) +
-                    "is associated with the function def on line number %s" %  function_defs["line_num"][i]
+                    "is associated with the function def on line number %s\n" %  function_defs["line_num"][i]
                 )
-                print("")
                 break
         else:
-            count_non_found_functions += 1
-print()            
-print("%s function calls did not find the function defs" % (count_non_found_functions))
+            no_matches_found += 1
+print("\n%s function calls did not find a function definition" % (no_matches_found))
