@@ -43,14 +43,14 @@ function_calls, function_defs = {"line_num":[], "functions":[]}, {"line_num":[],
 print("Function Calls")
         
 for num, cat in enumerate(categorizations):
-    if cat['func_call'] == 1:
+    if cat['func_call']: # 0 is false
         cat["functions"] = extract_function_name(cat["line"])
         function_calls["line_num"].append(num)
         function_calls["functions"].append(cat["functions"])
         
 print("Function defs")
 for num, cat in enumerate(categorizations):
-    if cat['func_def'] == 1:
+    if cat['func_def']:
         cat["function_defs"] = extract_function_name(cat["line"])
         function_defs["line_num"].append(num)
         function_defs["functions"].extend(cat["function_defs"])
