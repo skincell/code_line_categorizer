@@ -424,9 +424,14 @@ def main(args):
         # TODO Want to start categorizing this based on whether it is a multi-line conditional, function_call, function_def, and determine which one it is rather than just reassigning everything
         if line_number != 0:
             if categorizations[line_number - 1].multiline_statement_number and multiline_number:
-                categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
-                                                   conditional=is_conditional, func_def=is_function_def,
-                                                   equal_sign_assignment=is_equal_sign_assignment, func_call=is_function_call))
+                categorizations.append(
+                                       LineAndCats(
+                                           line, multiline_statement_number=multilines[line_number],
+                                           conditional=is_conditional, func_def=is_function_def,
+                                           equal_sign_assignment=is_equal_sign_assignment, func_call=is_function_call,
+                                           indentation_level=categorizations[line_number - 1].indentation_level
+                                       )
+                )
                 continue
         """
         Exclusive categorization
@@ -500,8 +505,7 @@ def main(args):
     _ = compare_new_to_old_hashes(uncat_storage, hash_file_path)
 
     if changed_line_classification:
-        pass
-        # raise NameError("The line(s) have changed classifications.")
+        raise NameError("The line(s) have changed classifications.")
 
     with open("../data/outputs/hash_storage.json", 'w') as fp:
         json.dump(hash_storage, fp)
