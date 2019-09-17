@@ -125,36 +125,38 @@ def determine_if_function_call(line):
     :param line:
     :return:
     """
+
     # Checking if the line is a not a function def.
     if "def" not in line or re.search("def\s", line.strip(" ")[0:4]) == None:
-        # Search for patterns which indicate function calls
-        results = re.search("(\w\s|\w)[(]", line)
-        if results != None:
-            for result in results.regs:
 
-                continue_on_result = False
+        function_name_candidates = re.findall("(.\w+\s|.\w+)[(]", line)
+        if function_name_candidates == None:
+            return 0
+        for func_name_candidate in function_name_candidates:
+            non_function_confirmed = False
+        
+            # Makes sure that the function isn't because of a non_function
+            # i.e example elif (x = 1 or y = 1) and (blah == 1)
+            non_functions = ["and", "or" , "if", "elif"]
+            for non_function in non_functions:
+                if non_function in func_name_candidate:
+                    # Checks to see whether the instance of the non_function is part of a variable/function name. 
+                    if non_function.strip() != func_name_candidate.strip().strip("."):
+                        continue
+                    else:
+                        non_function_confirmed = True
+                        break
                 
-                # Makes sure that the function isn't because of a keyword
-                # i.e example elif (x = 1 or y = 1) and (blah == 1)
-                keywords = ["and", "or" , "if", "elif"]
-                for keyword in keywords:
-                    if keyword in line:
-                        # Checks to see whether the instance of the keyword is at the start of a variable/function name. 
-                        secondary_results = re.search( "\s" + keyword, line)
-                        if secondary_results == None:
-                            continue
-                        for second_result in secondary_results.regs:
-                            # Checks whether the keyword is the same before the possible function
-                            if second_result[1]-1 == result[0]:
-                                continue_on_result = True
-                        
-                if continue_on_result:
-                    continue
-                if not check_if_in_string(line, result[0]):
-                    return 1
+            if non_function_confirmed:
+                continue
+        
+            # TODO check to see if the function is within a string
+            if len(func_name_candidate) == 0:
+                continue
+            elif not check_if_in_string(line, line.index(func_name_candidate)):
+                return 1
 
     return 0
-
 
 def find_comment_lines(lines):
     """
@@ -435,7 +437,7 @@ def main(args):
         is_conditional = determine_if_conditional(line) # This might be an exclusive one
         is_function_def = determine_if_function_def(line)
         is_equal_sign_assignment = determine_if_equal_sign_assignment(line)
-        is_function_call = determine_if_function_call(line)
+        is_function_call = determine_if_function_call_v2(line)
 
         # TODO try to figure out if you can use keyword arguments
         categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
