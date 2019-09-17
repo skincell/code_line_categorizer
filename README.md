@@ -9,16 +9,19 @@ This code base is meant to categorize each line of a *python* script several dif
 * function defs
 * assignments
 * function calls
+* indentation levels / scope levels?
+
+# Additional functionality
 * hash lines and storage
 * command line calling
-
+* finding matching function calls and defs
+*
 
 
 # Todo List
 --------------------------- After this then I start making the tool that will be used for establishing relationships for a single script.
 * loops
 * control statements -> break, continue, return, etc.
-* indentation level
 * Dealt with different assignments by making sub categories for each one rather than one broad category.... Revisit this.
 * Add integration testing
 * a lot more

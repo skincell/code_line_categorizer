@@ -1,4 +1,5 @@
 
+
 # All standard libraries
 import collections
 import re
@@ -6,6 +7,7 @@ import hashlib
 import json
 import os
 import argparse
+import pdb
 
 # TODO redo earlier sections with new found knowledge.
 
@@ -103,6 +105,16 @@ def determine_if_equal_sign_assignment(line):
 
     return 0
 
+def determine_indentation_level(line):
+    """
+    Determines the indent level of the line. This only works properly if either all tabs or spaces are used.
+    """
+    
+    indent_level = re.search("\w", line)
+    if indent_level.regs is not None:
+        return indent_level.regs[0][0]
+
+    return 0
 
 def determine_if_function_def(line):
     """
@@ -398,7 +410,8 @@ def main(args):
     hash_storage = {}
 
     # Add a new category here when added
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call')
+    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call indentation_level')
+    
     # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
     LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
 
@@ -437,12 +450,18 @@ def main(args):
         is_conditional = determine_if_conditional(line) # This might be an exclusive one
         is_function_def = determine_if_function_def(line)
         is_equal_sign_assignment = determine_if_equal_sign_assignment(line)
-        is_function_call = determine_if_function_call_v2(line)
+        is_function_call = determine_if_function_call(line)
+        indentation_level = determine_indentation_level(line)
 
         # TODO try to figure out if you can use keyword arguments
-        categorizations.append(LineAndCats(line, multiline_statement_number=multilines[line_number],
+        categorizations.append(
+                               LineAndCats(
+                                           line, multiline_statement_number=multilines[line_number],
                                            conditional=is_conditional, func_def=is_function_def,
-                                           equal_sign_assignment=is_equal_sign_assignment, func_call= is_function_call))
+                                           equal_sign_assignment=is_equal_sign_assignment,
+                                           func_call=is_function_call, indentation_level=indentation_level
+                               )
+        )
 
 
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
@@ -455,7 +474,7 @@ def main(args):
         hash_storage[hash_object.hexdigest()] = line_and_classifications
 
     # Debug portion -> maybe have all of theese produced into folders when ran???
-    print_file_cats(lines, "func_call", categorizations)
+    print_file_cats(lines, "indentation_level", categorizations)
 
     print("Uncategorized Lines")
 
@@ -481,7 +500,8 @@ def main(args):
     _ = compare_new_to_old_hashes(uncat_storage, hash_file_path)
 
     if changed_line_classification:
-       raise NameError("The line(s) have changed classifications.")
+        pass
+        # raise NameError("The line(s) have changed classifications.")
 
     with open("../data/outputs/hash_storage.json", 'w') as fp:
         json.dump(hash_storage, fp)
