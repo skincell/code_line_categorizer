@@ -7,7 +7,7 @@ import hashlib
 import json
 import os
 import argparse
-import pdb
+
 
 # TODO redo earlier sections with new found knowledge.
 
