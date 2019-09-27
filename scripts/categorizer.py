@@ -414,7 +414,7 @@ def main(args):
     
     # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
     LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
-
+    
     # Categorizing lines
     for line_number, line in enumerate(lines):
 
@@ -438,7 +438,7 @@ def main(args):
         """
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
-            categorizations.append(LineAndCats(line, comment=1))
+            categorizations.append(LineAndCats(line, comment=1, indentation_level=-1))
             continue
 
         is_empty = find_empty_lines(line)

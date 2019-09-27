@@ -34,6 +34,7 @@ def extract_function_name(line):
             functions.append(func_name_candidate[0:].strip().strip("."))
     return functions
 
+
                 
 with open("../data/outputs/categorizer_cat_output.json") as fp:
     categorizations = json.load(fp)
@@ -68,3 +69,43 @@ for index, function_list in enumerate(function_calls["functions"]):
         else:
             no_matches_found += 1
 print("\n%s function calls did not find a function definition" % (no_matches_found))
+
+print("Blocks")
+
+block_number = []
+indentation_level = []
+indent_level = 0
+# Yes, this for loop and the other for loops could be combined to reduce the amount of code.
+for index, cat in enumerate(categorizations):
+    previous_indentation_level =categorizations[index-1]['indentation_level']
+    
+    # May want to do something different with both cases: TODO
+    if index == 0:
+        indentation_level.append(0)
+        block_number.append(0)
+        print("starting Block 0")
+        print(cat['line'].strip())
+        continue
+    if cat['indentation_level'] < 0:
+        continue
+    if cat['empty']:
+        continue
+    
+    if cat['indentation_level'] > indentation_level[-1]:
+        indentation_level.append(cat['indentation_level'])
+        indent_level =  len(indentation_level) - 1
+
+        print("New Block %s" % (block_level))
+        print(cat['line'].strip())
+
+    if cat['indentation_level'] < indentation_level[-1]:
+
+        indentation_level.pop()
+        indent_level = indentation_level.index(cat['indentation_level'])
+        for i in range(len(indentation_level) -1 - indent_level):
+            indentation_level.pop()
+        print("back to previous block %s" % (block_level))
+        print(cat['line'].strip())
+        
+    if cat['indentation_level'] == previous_indentation_level:
+        print(cat['line'].strip())
