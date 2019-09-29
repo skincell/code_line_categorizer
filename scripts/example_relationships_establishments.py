@@ -1,5 +1,6 @@
 import json
 import re
+import pdb
 
 def extract_function_name(line):
 
@@ -70,19 +71,30 @@ for index, function_list in enumerate(function_calls["functions"]):
             no_matches_found += 1
 print("\n%s function calls did not find a function definition" % (no_matches_found))
 
+
+
+
+
 print("Blocks")
 
-block_number = []
+block_levels = []
 indentation_level = []
-indent_level = 0
+block_level = 0
+block_content = {}
+# You go up then you open up new blocks. You go down and you lose blocks
 # Yes, this for loop and the other for loops could be combined to reduce the amount of code.
+# This one categorizes the block by unique integer identifier. We could also identify it by how far into the code it is.
+# This was put aside bc the use case needed to be developed to understand which solution we want to do.
+# The two possible solutions that I'm debating are: a tree with child parent nodes, or a double categorization with unique identifiers for each node, and code level. We probably want the tree structure, but I am non-commital. The double categorization will be a problem bc you will still need to calculate the blocks that are related.  
+
+
 for index, cat in enumerate(categorizations):
     previous_indentation_level =categorizations[index-1]['indentation_level']
     
     # May want to do something different with both cases: TODO
     if index == 0:
         indentation_level.append(0)
-        block_number.append(0)
+        block_content["0"] = [cat['line'].strip()]
         print("starting Block 0")
         print(cat['line'].strip())
         continue
@@ -93,19 +105,30 @@ for index, cat in enumerate(categorizations):
     
     if cat['indentation_level'] > indentation_level[-1]:
         indentation_level.append(cat['indentation_level'])
-        indent_level =  len(indentation_level) - 1
-
-        print("New Block %s" % (block_level))
-        print(cat['line'].strip())
-
-    if cat['indentation_level'] < indentation_level[-1]:
-
-        indentation_level.pop()
-        indent_level = indentation_level.index(cat['indentation_level'])
-        for i in range(len(indentation_level) -1 - indent_level):
-            indentation_level.pop()
-        print("back to previous block %s" % (block_level))
-        print(cat['line'].strip())
+        block_level +=1
+        block_content[str(block_level)] = [cat['line'].strip()]
+        block_levels.append(block_level)
         
-    if cat['indentation_level'] == previous_indentation_level:
-        print(cat['line'].strip())
+    elif cat['indentation_level'] < indentation_level[-1]:
+        indentation_level.pop()
+        block_levels.pop()
+        indent_index = indentation_level.index(cat['indentation_level'])
+        for i in range(len(indentation_level) - 1 - indent_index):
+            indentation_level.pop()
+            block_levels.pop()
+            #TODO deal with repeats
+        if len(indentation_level) == 1:
+            print("back to previous block %s" % (0))
+            block_content["0"].append(cat['line'].strip())
+        else:
+            block_content[str(block_levels[-1])].append(cat['line'].strip())      
+    elif cat['indentation_level'] == indentation_level[-1]:
+        if len(block_levels) == 0:
+            block_content[str(0)].append(cat['line'].strip())
+        else:
+            block_content[str(block_levels[-1])].append(cat['line'].strip())
+
+for i in block_content:
+    print(i)
+    for j in block_content[i]:
+        print(j)
