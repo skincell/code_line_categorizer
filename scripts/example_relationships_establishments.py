@@ -74,32 +74,3 @@ for index, function_list in enumerate(function_calls["functions"]):
             no_matches_found += 1
 print("\n%s function calls did not find a function definition" %
       (no_matches_found))
-
-
-"""
-r = open("./categorizer.py", "r")
-t = ast.parse(r.read())
-
-
-for i in ast.iter_child_nodes(t):
-    print(i)
-    for j in ast.iter_fields(i):
-        print(j)
-    print()
-    pdb.set_trace()
-"""
-
-"""
-for cat in categorizations:
-    print(cat)
-    if cat["func_def"] == 0 and cat["conditional"] == 0 and cat["comment"] != 1 and cat["equal_sign_assignment"] == 1:
-        ast_node = ast.parse(cat["line"].strip())
-        for i in ast_node.body:
-            pdb.set_trace()
-            print("targets")
-            [print(j.id) for j in i.targets]
-            print("Value")
-            print(i.value.value)
-
-            input()
-"""
