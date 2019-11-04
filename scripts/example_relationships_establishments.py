@@ -57,25 +57,7 @@ with open("../data/outputs/categorizer_cat_output.json") as fp:
 function_calls, function_defs = {"line_num": [], "functions": []}, {
     "line_num": [], "functions": []}
 
-# Person inputs these values
-variable_to_search_for = "line"
-line_number = "461"
-cat_index = int(line_number) - 1
-print(cat_index)
-print(categorizations[cat_index]["line"])
-print(categorizations[cat_index]["indentation_level"])
 
-for num, cat in enumerate(categorizations):
-    if variable_to_search_for in cat["line"] and \
-       not cat["comment"]:
-        if_contains_variable = determine_if_has_variable(
-            variable_to_search_for, cat["line"])
-        if if_contains_variable:
-            print("line number %s contains %s," %
-                  (num + 1, variable_to_search_for))
-            print(cat["line"])
-
-pdb.set_trace()
 print("Function Calls")
 print("Function defs")
 for num, cat in enumerate(categorizations):
@@ -108,3 +90,73 @@ for index, function_list in enumerate(function_calls["functions"]):
             no_matches_found += 1
 print("\n%s function calls did not find a function definition" %
       (no_matches_found))
+
+
+# Person inputs these values
+variable_to_search_for = "line"
+line_number = "461"
+cat_index = int(line_number) - 1
+
+# indice of the instances that the variable occurs
+variable_instances = []
+
+# Determine all usages of variable
+for num, cat in enumerate(categorizations):
+    if variable_to_search_for in cat["line"] and \
+       not cat["comment"]:
+        if_contains_variable = determine_if_has_variable(
+            variable_to_search_for, cat["line"])
+        if if_contains_variable:
+            print("line number %s contains %s," %
+                  (num + 1, variable_to_search_for))
+            print(cat["line"])
+            variable_instances.append(num)
+
+
+# keep track of two variables, block number and indentation number
+# block number is an identifer for this specific block
+# indentation number states how far it is nested
+
+print("Blocks")
+
+block_number = [-1] * len(categorizations)
+nested_level = [-1] * len(categorizations)
+previous_indentation_level = -1
+previous_block_number = -1
+previous_nested_number = -1
+indent_levels = []
+
+for index, cat in enumerate(categorizations):
+    # The indentation can be below zero bc it is a comment
+    if cat['indentation_level'] < 0:
+        continue
+    if cat['empty']:
+        continue
+
+    pdb.set_trace()
+    for i in range(index - 1, 0, -1):
+        if categorizations[i]['indentation_level'] != -1 and block_number[i] != -1:
+            previous_indentation_level = categorizations[i]['indentation_level']
+            previous_block_number = block_number[i]
+            previous_nested_number = nested_level[i]
+            break
+
+    if cat['indentation_level'] > previous_indentation_level:
+        block_number[index] = previous_block_number + 1
+        nested_level[index] = previous_nested_number + 1
+        indent_levels.append(cat['indentation_level'])
+
+    elif cat['indentation_level'] < previous_indentation_level:
+        block_number[index] = previous_block_number + 1
+        new_nested_number = indent_levels.index(cat['indentation_level'])
+        nested_level[index] = new_nested_number
+        indent_levels = indent_levels[:new_nested_number+1]
+
+    else:
+        block_number[index] = previous_block_number
+        nested_level[index] = previous_nested_number
+
+    print("block level: %s" % (block_number[index]))
+    print("nested_level: %s" % (nested_level[index]))
+    print("line")
+    print(cat["line"])
