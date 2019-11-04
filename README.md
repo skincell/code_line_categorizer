@@ -20,6 +20,7 @@ This code base is meant to categorize each line of a *python* script several dif
 
 # Todo List
 --------------------------- After this then I start making the tool that will be used for establishing relationships for a single script.
+* stich together the usage of the variables and highlight the usage lines.
 * loops
 * control statements -> break, continue, return, etc.
 * Dealt with different assignments by making sub categories for each one rather than one broad category.... Revisit this.

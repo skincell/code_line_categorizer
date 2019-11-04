@@ -92,27 +92,6 @@ print("\n%s function calls did not find a function definition" %
       (no_matches_found))
 
 
-# Person inputs these values
-variable_to_search_for = "line"
-line_number = "461"
-cat_index = int(line_number) - 1
-
-# indice of the instances that the variable occurs
-variable_instances = []
-
-# Determine all usages of variable
-for num, cat in enumerate(categorizations):
-    if variable_to_search_for in cat["line"] and \
-       not cat["comment"]:
-        if_contains_variable = determine_if_has_variable(
-            variable_to_search_for, cat["line"])
-        if if_contains_variable:
-            print("line number %s contains %s," %
-                  (num + 1, variable_to_search_for))
-            print(cat["line"])
-            variable_instances.append(num)
-
-
 # keep track of two variables, block number and indentation number
 # block number is an identifer for this specific block
 # indentation number states how far it is nested
@@ -133,7 +112,6 @@ for index, cat in enumerate(categorizations):
     if cat['empty']:
         continue
 
-    pdb.set_trace()
     for i in range(index - 1, 0, -1):
         if categorizations[i]['indentation_level'] != -1 and block_number[i] != -1:
             previous_indentation_level = categorizations[i]['indentation_level']
@@ -156,7 +134,67 @@ for index, cat in enumerate(categorizations):
         block_number[index] = previous_block_number
         nested_level[index] = previous_nested_number
 
-    print("block level: %s" % (block_number[index]))
-    print("nested_level: %s" % (nested_level[index]))
-    print("line")
-    print(cat["line"])
+    print(cat["line"], "block level: %s" % (block_number[index]),
+          "nested_level: %s" % (nested_level[index]))
+
+
+# Person inputs these values
+variable_to_search_for = "line"
+line_number = "461"
+cat_index = int(line_number) - 1
+
+# indice of the instances that the variable occurs
+variable_instances = []
+# Determine all usages of variable
+for num, cat in enumerate(categorizations):
+    if variable_to_search_for in cat["line"] and \
+       not cat["comment"]:
+        if_contains_variable = determine_if_has_variable(
+            variable_to_search_for, cat["line"])
+        if if_contains_variable:
+            print("line number %s contains %s," %
+                  (num + 1, variable_to_search_for))
+            print(cat["line"])
+            variable_instances.append(num)
+
+
+# print out the context of each usage
+for variable_instance in variable_instances:
+    print_lines = []
+    number_of_blocks_before = 2
+    number_of_blocks_after = 1
+    block = block_number[variable_instance]
+    nest = nested_level[variable_instance]
+
+    print("line usage %s" % (variable_instance))
+    for i in range(variable_instance - 1, 0, -1):
+        if block_number[i] != -1 and abs(block_number[i] - block) > number_of_blocks_before:
+            break
+
+        if nest == 0:
+            break
+
+        print_lines.append(categorizations[i]["line"].strip("\n"))
+        if nested_level[i] == 0:
+            break
+
+    print_lines = list(reversed(print_lines))
+    for i in range(variable_instance, len(categorizations)):
+        if block_number[i] != -1 and abs(block_number[i] - block) > number_of_blocks_after:
+            break
+        if variable_instance != i and nested_level[i] == 0:
+            break
+
+        print_lines.append(categorizations[i]["line"].strip("\n"))
+
+    for li in print_lines:
+        print(li)
+
+# categorize the appearances of the variable - nah
+# categories
+# argument of a function
+# operand
+# assignment
+# conditional
+# part of control loop
+# returnee
