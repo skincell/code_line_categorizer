@@ -3,6 +3,19 @@ import re
 import pdb
 import ast
 
+from helper_functions import check_if_in_string
+
+
+def determine_if_has_variable(var, line):
+    # Search for patterns which indicate var presense
+    for match_item in re.finditer("[^\w]%s[^\w]" % var, line):
+        if check_if_in_string(line, match_item.start() + 1):
+            continue
+        else:
+            return 1
+    else:
+        return 0
+
 
 def extract_function_name(line):
 
@@ -44,20 +57,41 @@ with open("../data/outputs/categorizer_cat_output.json") as fp:
 function_calls, function_defs = {"line_num": [], "functions": []}, {
     "line_num": [], "functions": []}
 
-print("Function Calls")
+# Person inputs these values
+variable_to_search_for = "line"
+line_number = "461"
+cat_index = int(line_number) - 1
+print(cat_index)
+print(categorizations[cat_index]["line"])
+print(categorizations[cat_index]["indentation_level"])
 
 for num, cat in enumerate(categorizations):
-    if cat['func_call']:  # 0 is false
-        cat["functions"] = extract_function_name(cat["line"])
-        function_calls["line_num"].append(num)
-        function_calls["functions"].append(cat["functions"])
+    if variable_to_search_for in cat["line"] and \
+       not cat["comment"]:
+        if_contains_variable = determine_if_has_variable(
+            variable_to_search_for, cat["line"])
+        if if_contains_variable:
+            print("line number %s contains %s," %
+                  (num + 1, variable_to_search_for))
+            print(cat["line"])
 
+pdb.set_trace()
+print("Function Calls")
 print("Function defs")
 for num, cat in enumerate(categorizations):
+
+    # check if it is a function def
     if cat['func_def']:
         cat["function_defs"] = extract_function_name(cat["line"])
         function_defs["line_num"].append(num)
         function_defs["functions"].extend(cat["function_defs"])
+    # then check if it is a function call
+    elif cat['func_call']:  # 0 is false
+        cat["functions"] = extract_function_name(cat["line"])
+        function_calls["line_num"].append(num)
+        function_calls["functions"].append(cat["functions"])
+    # Have nothing for a function def which has a function call...
+    # I don't want to add this in. Don't make me..
 
 no_matches_found = 0
 for index, function_list in enumerate(function_calls["functions"]):
