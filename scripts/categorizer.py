@@ -1,5 +1,3 @@
-
-
 # All standard libraries
 import collections
 import re
@@ -7,9 +5,12 @@ import hashlib
 import json
 import os
 import argparse
-import pdb
+
+# user defined imports
+from helper_functions import check_if_in_string
 
 # TODO redo earlier sections with new found knowledge.
+
 
 def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
     """
@@ -32,13 +33,16 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
                     # Do not care if only line has changed and no change in categorizations -> this is already taken care of implicitly
                     # Do care if line doesn't change but categorizations do.
                     if new_hash_storage[script_line_hash] not in previous_hash_storage[script_line_hash]:
-                        line_end_index = new_hash_storage[script_line_hash].index("\n")
-                        index_of_line = new_hash_storage[script_line_hash].index("line")
+                        line_end_index = new_hash_storage[script_line_hash].index(
+                            "\n")
+                        index_of_line = new_hash_storage[script_line_hash].index(
+                            "line")
 
                         string_1 = previous_hash_storage[script_line_hash]
                         string_2 = new_hash_storage[script_line_hash]
 
-                        indices_of_differences = [i for i in range(len(string_1)) if string_1[i] != string_2[i]]
+                        indices_of_differences = [i for i in range(
+                            len(string_1)) if string_1[i] != string_2[i]]
 
                         print(
                             "Changed Categorization line \n %s " % (string_1[index_of_line + 4:line_end_index]).strip())
@@ -53,6 +57,7 @@ def compare_new_to_old_hashes(new_hash_storage, old_hash_file_path):
 
     return changed_line_classification
 
+
 def find_empty_lines(line):
     """
     Returns 1 for an empty line and 0 for non-empty
@@ -62,8 +67,8 @@ def find_empty_lines(line):
 
     if line.strip("\t").strip(" ").strip("\n") == '':
         return 1
-
     return 0
+
 
 def determine_if_conditional(line):
     """
@@ -84,8 +89,8 @@ def determine_if_conditional(line):
 
     return 0
 
-def determine_if_equal_sign_assignment(line):
 
+def determine_if_equal_sign_assignment(line):
     """
     Determines if the line has an assignment associated with it.
 
@@ -105,16 +110,18 @@ def determine_if_equal_sign_assignment(line):
 
     return 0
 
+
 def determine_indentation_level(line):
     """
     Determines the indent level of the line. This only works properly if either all tabs or spaces are used.
     """
-    
+
     indent_level = re.search("\w", line)
     if indent_level.regs is not None:
         return indent_level.regs[0][0]
 
     return 0
+
 
 def determine_if_function_def(line):
     """
@@ -129,6 +136,7 @@ def determine_if_function_def(line):
             return 1
 
     return 0
+
 
 def determine_if_function_call(line):
     """
@@ -146,22 +154,22 @@ def determine_if_function_call(line):
             return 0
         for func_name_candidate in function_name_candidates:
             non_function_confirmed = False
-        
+
             # Makes sure that the function isn't because of a non_function
             # i.e example elif (x = 1 or y = 1) and (blah == 1)
-            non_functions = ["and", "or" , "if", "elif"]
+            non_functions = ["and", "or", "if", "elif"]
             for non_function in non_functions:
                 if non_function in func_name_candidate:
-                    # Checks to see whether the instance of the non_function is part of a variable/function name. 
+                    # Checks to see whether the instance of the non_function is part of a variable/function name.
                     if non_function.strip() != func_name_candidate.strip().strip("."):
                         continue
                     else:
                         non_function_confirmed = True
                         break
-                
+
             if non_function_confirmed:
                 continue
-        
+
             # TODO check to see if the function is within a string
             if len(func_name_candidate) == 0:
                 continue
@@ -169,6 +177,7 @@ def determine_if_function_call(line):
                 return 1
 
     return 0
+
 
 def find_comment_lines(lines):
     """
@@ -188,12 +197,12 @@ def find_comment_lines(lines):
 
         # Checks for a regular comment
         if line.strip(" ").strip("\t")[0] == "#":
-             comment_lines.append(1)
-             continue
+            comment_lines.append(1)
+            continue
 
         # Checks for multiline comment start or end
         elif ("\"\"\"" in line or "'''" in line) \
-            and "if" not in line:
+                and "if" not in line:
             # ["if" not in line]^ is a hack that can come back to hurt the project.
 
             comment_lines.append(1)
@@ -215,6 +224,7 @@ def find_comment_lines(lines):
         comment_lines.append(0)
 
     return comment_lines
+
 
 def strip_comments_after_code(lines, comment_lines):
     """
@@ -248,65 +258,13 @@ def strip_comments_after_code(lines, comment_lines):
 
                 if not check_if_in_string(line, comment_symbol_index):
                     # inline comments are removed from lines to reduce categorization complexity
-                    lines[line_number] = line[0:comment_symbol_index]  # Should disappear inline comments from the analyzer
+                    # Should disappear inline comments from the analyzer
+                    lines[line_number] = line[0:comment_symbol_index]
                     break
 
                 # string_to_search is only for finding multiple # not for using in the quotation balancing
                 string_to_search = line[comment_symbol_index + 1:]
 
-def check_if_in_string(line, index_to_check):
-    #TODO we use and will be using this function a lot; see if there is a way to reduce runtime in function.
-    """
-    Function determines if the index that you are trying to identify is in a string or not.
-    This is useful in identifying whether your variable is an actual categorization or a false positive.
-    It does this by counting quotations before the index to determine if the quotations are unbalanced hence an open string.
-
-    :param line:
-    :param index_to_check:
-    :return:
-    """
-    # Trying to capture the excpetion that a # in is in a string rather than after code on a line
-    before_counter = 0
-    after_counter = 0
-    # Empty string
-    last_quotation = ''
-    # Tries to find the before and after balance of quotations.
-    # There is probably an imbalance with \" or ' might be weird.
-    for char_index, char in enumerate(line):
-
-        # Check for a quotation character first
-        if "\"" in char or ("'" in char):
-            if char_index != 0:
-
-                # Pass over the cases that a quotation is inside a quotation.
-                if line[char_index - 1] == "\\" or \
-                        ("\'" in char and before_counter % 2 == 1 and "\"" in last_quotation):
-                    continue
-                else:
-
-                    # Counts quotation marks before current character
-                    # Also tracks which quotation mark was the most recent openned one
-                    if char_index < index_to_check:
-                        before_counter += 1
-
-                        # Tracks the type of the last open quotation mark used
-                        if before_counter % 2 == 1:
-                            last_quotation = char
-                        else:
-                            # Assigns an empty string
-                            last_quotation = ''
-
-                    # Currently we do not use the after counter
-                    else:
-                        after_counter += 1
-            else:
-                before_counter += 1
-
-    # You are not in a string
-    if before_counter % 2 == 0:
-        return False
-    else:
-        return True
 
 def multiline_lines(lines, comment_lines):
     """
@@ -386,6 +344,7 @@ def multiline_lines(lines, comment_lines):
 
     return multiline_statements
 
+
 def main(args):
     """
     Currently this function does some prescripted stuff.
@@ -410,8 +369,9 @@ def main(args):
     hash_storage = {}
 
     # Add a new category here when added
-    LineAndCats = collections.namedtuple('LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call indentation_level')
-    
+    LineAndCats = collections.namedtuple(
+        'LineAndCats', 'line multiline_statement_number comment conditional empty func_def equal_sign_assignment func_call indentation_level')
+
     # https://stackoverflow.com/questions/11351032/namedtuple-and-default-values-for-optional-keyword-arguments
     LineAndCats.__new__.__defaults__ = (0,) * len(LineAndCats._fields)
 
@@ -425,12 +385,13 @@ def main(args):
         if line_number != 0:
             if categorizations[line_number - 1].multiline_statement_number and multiline_number:
                 categorizations.append(
-                                       LineAndCats(
-                                           line, multiline_statement_number=multilines[line_number],
-                                           conditional=is_conditional, func_def=is_function_def,
-                                           equal_sign_assignment=is_equal_sign_assignment, func_call=is_function_call,
-                                           indentation_level=categorizations[line_number - 1].indentation_level
-                                       )
+                    LineAndCats(
+                        line, multiline_statement_number=multilines[line_number],
+                        conditional=is_conditional, func_def=is_function_def,
+                        equal_sign_assignment=is_equal_sign_assignment, func_call=is_function_call,
+                        indentation_level=categorizations[line_number -
+                                                          1].indentation_level
+                    )
                 )
                 continue
         """
@@ -438,7 +399,8 @@ def main(args):
         """
         # Skip over if comment lines... we might need to rethink this, but it avoids problems in categorizing the rest..
         if comment_lines[line_number]:
-            categorizations.append(LineAndCats(line, comment=1))
+            categorizations.append(LineAndCats(
+                line, comment=1, indentation_level=-1))
             continue
 
         is_empty = find_empty_lines(line)
@@ -447,12 +409,12 @@ def main(args):
             categorizations.append(LineAndCats(line, empty=1))
             continue
 
-
         """
         Inclusive categorizations
         """
         # Categorizing
-        is_conditional = determine_if_conditional(line) # This might be an exclusive one
+        is_conditional = determine_if_conditional(
+            line)  # This might be an exclusive one
         is_function_def = determine_if_function_def(line)
         is_equal_sign_assignment = determine_if_equal_sign_assignment(line)
         is_function_call = determine_if_function_call(line)
@@ -460,21 +422,22 @@ def main(args):
 
         # TODO try to figure out if you can use keyword arguments
         categorizations.append(
-                               LineAndCats(
-                                           line, multiline_statement_number=multilines[line_number],
-                                           conditional=is_conditional, func_def=is_function_def,
-                                           equal_sign_assignment=is_equal_sign_assignment,
-                                           func_call=is_function_call, indentation_level=indentation_level
-                               )
+            LineAndCats(
+                line, multiline_statement_number=multilines[line_number],
+                conditional=is_conditional, func_def=is_function_def,
+                equal_sign_assignment=is_equal_sign_assignment,
+                func_call=is_function_call, indentation_level=indentation_level
+            )
         )
-
 
         hash_object = hashlib.md5((line + " " + str(line_number)).encode())
 
         # Create a string which tracks line classfications/categorizations to store in hash
         line_and_classifications = ""
         for number in range(len(LineAndCats._fields)):
-            line_and_classifications += " " +  "%s " % (LineAndCats._fields[number]) + str(categorizations[-1][number])
+            line_and_classifications += " " + \
+                "%s " % (LineAndCats._fields[number]) + \
+                str(categorizations[-1][number])
 
         hash_storage[hash_object.hexdigest()] = line_and_classifications
 
@@ -497,7 +460,8 @@ def main(args):
 
     # Changed categorization lines
     hash_file_path = "../data/outputs/hash_storage.json"
-    changed_line_classification = compare_new_to_old_hashes(hash_storage, hash_file_path)
+    changed_line_classification = compare_new_to_old_hashes(
+        hash_storage, hash_file_path)
 
     print("Newly Categorized")
     # Going from uncategorized to categorized
@@ -518,8 +482,9 @@ def main(args):
         for index, cat in enumerate(categorizations):
             # https://gist.github.com/Integralist/b25185f91ebc8a56fe070d499111b447
             dict_cat[index] = cat._asdict()
-            
+
         json.dump(dict_cat, fp)
+
 
 def print_file_cats(lines, category, categorizations):
     """
@@ -534,11 +499,15 @@ def print_file_cats(lines, category, categorizations):
 
         stripped_line = line.strip("\n")
         # Wow if I had assigned a doc string to the variable then I would have had a comment categorization...
-        code = "print(str(line_number) + \" \" + str(categorizations[line_number].%s) + \" \" + stripped_line)" % (category)
+        code = "print(str(line_number) + \" \" + str(categorizations[line_number].%s) + \" \" + stripped_line)" % (
+            category)
         exec(code)
+
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Categorizes the lines of code in a single script")
-    parser.add_argument("--file_path", default="./categorizer.py", help="File path of file to categorize" )
+    parser = argparse.ArgumentParser(
+        description="Categorizes the lines of code in a single script")
+    parser.add_argument("--file_path", default="./categorizer.py",
+                        help="File path of file to categorize")
     main(parser.parse_args())
