@@ -51,7 +51,7 @@ def extract_function_name(line):
     return functions
 
 
-with open("../data/outputs/categorizer_cat_output.json") as fp:
+with open("../data/outputs/singleton_cat_output.json") as fp:
     categorizations = json.load(fp)
 
 function_calls, function_defs = {"line_num": [], "functions": []}, {
@@ -139,8 +139,8 @@ for index, cat in enumerate(categorizations):
 
 
 # Person inputs these values
-variable_to_search_for = "line"
-line_number = "461"
+variable_to_search_for = "inside_puzzle_box"
+line_number = "61"
 cat_index = int(line_number) - 1
 
 # indice of the instances that the variable occurs
@@ -158,6 +158,8 @@ for num, cat in enumerate(categorizations):
             variable_instances.append(num)
 
 
+instances_to_skip = []
+context_number = 0
 # print out the context of each usage
 for variable_instance in variable_instances:
     print_lines = []
@@ -165,9 +167,11 @@ for variable_instance in variable_instances:
     number_of_blocks_after = 1
     block = block_number[variable_instance]
     nest = nested_level[variable_instance]
+    if variable_instance in instances_to_skip:
+        continue
 
-    print("line usage %s" % (variable_instance))
     for i in range(variable_instance - 1, 0, -1):
+
         if block_number[i] != -1 and abs(block_number[i] - block) > number_of_blocks_before:
             break
 
@@ -184,9 +188,13 @@ for variable_instance in variable_instances:
             break
         if variable_instance != i and nested_level[i] == 0:
             break
+        if variable_to_search_for in categorizations[i]["line"] and block_number[i] == block:
+            instances_to_skip.append(i)
 
         print_lines.append(categorizations[i]["line"].strip("\n"))
 
+    print("Context number %s" % (context_number))
+    context_number += 1
     for li in print_lines:
         print(li)
 
